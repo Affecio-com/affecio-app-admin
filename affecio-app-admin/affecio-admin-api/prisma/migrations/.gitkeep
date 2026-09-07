@@ -1,0 +1,2 @@
+# Keep empty until first migration is generated
+# Run: npx prisma migrate dev --name init

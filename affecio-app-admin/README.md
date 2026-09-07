@@ -1,36 +1,51 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Affecio Admin Portal
 
-## Getting Started
+Desktop-only admin UI for Affecio. Connects to **affecio-admin-api** on port **4001** and shares the same PostgreSQL database as the main mobile API (port 4000).
 
-First, run the development server:
+## Setup
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Frontend (this repo)
+cd affecio-app-admin
+npm install --prefer-offline --no-audit --no-fund
+cp .env.example .env.local
+
+# Backend (sibling folder)
+cd ../affecio-admin-api
+npm install --prefer-offline --no-audit --no-fund
+cp .env.example .env
+# Set DATABASE_URL to your shared Postgres — do NOT run migrate reset
+npx prisma generate
+npm run dev   # http://localhost:4001
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+```bash
+# Back in frontend
+npm run dev   # http://localhost:3000
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Design system
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Affecio mobile tokens mapped to Tailwind:
 
-## Learn More
+| Token | Value | Usage |
+|-------|-------|-------|
+| bg | `#000000` | Page background |
+| surface | `#111111` | Cards, sidebar |
+| input | `#1A1A1A` | Inputs, row hover |
+| border | `#2A2A2A` | Borders |
+| text | `#FFFFFF` | Headings |
+| muted | `#AAAAAA` | Metadata |
+| accent | `#FF4B63` | Active nav, CTAs |
+| danger | `#FF3B30` | Destructive |
+| link | `#4FC3F7` | Links |
 
-To learn more about Next.js, take a look at the following resources:
+Fonts: **Poppins** (body), **PP Mondwest** (titles — add `.woff2` to `public/fonts/`), **PP Neue Bit** (stats).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Desktop only
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Viewports below **1024px** show a full-screen "desktop only" message. Dashboard layout requires **1280px** min width with a **240px** fixed sidebar.
 
-## Deploy on Vercel
+## Database
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The admin API uses `prisma db pull` + `prisma db push` on the shared DB. **Never run `prisma migrate reset`.**

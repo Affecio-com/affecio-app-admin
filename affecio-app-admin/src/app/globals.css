@@ -1,0 +1,87 @@
+@import "tailwindcss";
+@config "../../tailwind.config.cjs";
+
+:root {
+  /* Affecio mobile tokens → admin web */
+  --affecio-bg: #000000;
+  --affecio-surface: #111111;
+  --affecio-input: #1a1a1a;
+  --affecio-border: #2a2a2a;
+  --affecio-text: #ffffff;
+  --affecio-muted: #aaaaaa;
+  --affecio-accent: #ff4b63;
+  --affecio-danger: #ff3b30;
+  --affecio-link: #4fc3f7;
+  --affecio-divider: rgba(255, 255, 255, 0.12);
+
+  /* shadcn-compatible aliases */
+  --background: var(--affecio-bg);
+  --foreground: var(--affecio-text);
+  --surface: var(--affecio-surface);
+  --input-bg: var(--affecio-input);
+  --muted: var(--affecio-input);
+  --muted-foreground: var(--affecio-muted);
+  --border: var(--affecio-border);
+  --ring: var(--affecio-accent);
+  --primary: var(--affecio-text);
+  --primary-foreground: #000000;
+  --destructive: var(--affecio-danger);
+  --destructive-foreground: var(--affecio-text);
+  --accent: var(--affecio-accent);
+  --link: var(--affecio-link);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-input-bg: var(--input-bg);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-accent: var(--accent);
+  --color-link: var(--link);
+  --color-affecio-bg: var(--affecio-bg);
+  --color-affecio-surface: var(--affecio-surface);
+  --color-affecio-input: var(--affecio-input);
+  --color-affecio-border: var(--affecio-border);
+  --color-affecio-text: var(--affecio-text);
+  --color-affecio-muted: var(--affecio-muted);
+  --color-affecio-accent: var(--affecio-accent);
+  --color-affecio-danger: var(--affecio-danger);
+  --color-affecio-link: var(--affecio-link);
+  --font-sans: var(--font-poppins);
+  --font-display: var(--font-mondwest);
+  --font-mono: var(--font-neuebit);
+}
+
+* {
+  border-color: var(--border);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-poppins), system-ui, sans-serif;
+}
+
+.font-display {
+  font-family: var(--font-mondwest), var(--font-poppins), system-ui, sans-serif;
+}
+
+.affecio-divider {
+  border-color: var(--affecio-divider);
+}
+
+a.affecio-link {
+  color: var(--affecio-link);
+}
+
+a.affecio-link:hover {
+  text-decoration: underline;
+}
