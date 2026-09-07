@@ -128,6 +128,20 @@ enum AdminRole {
   moderator
   support
   developer
+  marketing
+}
+
+enum PushCampaignStatus {
+  draft
+  sent
+  failed
+  partial
+}
+
+enum PushAudience {
+  all
+  new_users
+  active_users
 }
 
 enum ReportStatus {
@@ -151,17 +165,49 @@ enum VerificationStatus {
 }
 
 model AdminUser {
-  id           String    @id @default(cuid())
-  email        String    @unique
-  passwordHash String
-  name         String
-  role         AdminRole @default(admin)
-  mfaEnabled   Boolean   @default(false)
-  mfaSecret    String?
-  lastLoginAt  DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  auditLogs    AuditLog[]
+  id            String         @id @default(cuid())
+  email         String         @unique
+  passwordHash  String
+  name          String
+  role          AdminRole      @default(admin)
+  mfaEnabled    Boolean        @default(false)
+  mfaSecret     String?
+  lastLoginAt   DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  auditLogs     AuditLog[]
+  pushCampaigns PushCampaign[]
+}
+
+model PushDeviceToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  platform  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model PushCampaign {
+  id          String             @id @default(cuid())
+  title       String
+  body        String
+  audience    PushAudience       @default(all)
+  status      PushCampaignStatus @default(draft)
+  sentCount   Int                @default(0)
+  failedCount Int                @default(0)
+  targetCount Int                @default(0)
+  createdById String
+  createdBy   AdminUser          @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  sentAt      DateTime?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@index([createdById])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model AuditLog {

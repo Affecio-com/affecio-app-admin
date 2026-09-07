@@ -231,7 +231,11 @@ router.post(
       });
     } catch (error) {
       console.error("MFA setup failed:", error);
-      res.status(500).json({ message: "Failed to start MFA setup" });
+      const message =
+        error instanceof Error && error.message.includes("mfaSecret")
+          ? "Database is missing MFA columns. Run: npx prisma db push (in affecio-admin-api)"
+          : "Failed to start MFA setup";
+      res.status(500).json({ message });
     }
   },
 );

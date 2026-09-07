@@ -14,7 +14,7 @@ const createAdminSchema = z.object({
   email: z.email(),
   password: z.string().min(8),
   name: z.string().min(1),
-  role: z.enum(["super_admin", "admin", "moderator", "support", "developer"]),
+  role: z.enum(["super_admin", "admin", "moderator", "support", "developer", "marketing"]),
 });
 
 router.get("/", async (_req, res) => {

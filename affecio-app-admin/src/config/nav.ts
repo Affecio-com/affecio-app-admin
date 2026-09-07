@@ -3,6 +3,7 @@ import {
   Ban,
   BarChart3,
   BadgeCheck,
+  Bell,
   Code2,
   Flag,
   Heart,
@@ -38,14 +39,14 @@ export const navItems: NavItem[] = [
   {
     label: "Overview",
     href: "/",
-    roles: ["super_admin", "admin", "moderator", "support", "developer"],
+    roles: ["super_admin", "admin", "moderator", "support", "developer", "marketing"],
     icon: LayoutDashboard,
     section: "main",
   },
   {
     label: "Users",
     href: "/users",
-    roles: ["super_admin", "admin", "moderator", "support"],
+    roles: ["super_admin", "admin", "moderator", "support", "marketing"],
     icon: Users,
     section: "main",
   },
@@ -101,9 +102,16 @@ export const navItems: NavItem[] = [
   {
     label: "Analytics",
     href: "/analytics",
-    roles: ["super_admin", "admin", "developer"],
+    roles: ["super_admin", "admin", "developer", "marketing"],
     icon: BarChart3,
     section: "general",
+  },
+  {
+    label: "Push notifications",
+    href: "/users/push-notifications",
+    roles: ["super_admin", "admin", "marketing"],
+    icon: Bell,
+    section: "main",
   },
   {
     label: "Developers",

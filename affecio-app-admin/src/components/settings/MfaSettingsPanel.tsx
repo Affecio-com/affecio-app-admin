@@ -13,6 +13,7 @@ import {
   getMfaStatus,
   setupMfa,
 } from "@/services/adminAuth";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { useAuth } from "@/providers/AuthProvider";
 
 export function MfaSettingsPanel() {
@@ -79,7 +80,14 @@ export function MfaSettingsPanel() {
   const pending = status?.pending ?? false;
 
   useEffect(() => {
-    if (pending && !enabled && !setupData && !setupMutation.isPending && !setupMutation.isError) {
+    if (
+      pending &&
+      !enabled &&
+      !setupData &&
+      !setupMutation.isPending &&
+      !setupMutation.isError &&
+      !error
+    ) {
       setupMutation.mutate();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -132,7 +140,9 @@ export function MfaSettingsPanel() {
       ) : setupData || pending ? (
         <div className="space-y-5">
           <p className="text-sm text-affecio-muted">
-            Scan this QR code with Google Authenticator, Authy, or 1Password.
+            Scan this QR code with Google Authenticator, Authy, or 1Password. The entry will appear as{" "}
+            <span className="text-affecio-text">Affecio</span> (issuer name — authenticator apps do not
+            show custom logos from the QR code).
           </p>
           <div className="flex flex-wrap items-start gap-6">
             {qrUrl ? (

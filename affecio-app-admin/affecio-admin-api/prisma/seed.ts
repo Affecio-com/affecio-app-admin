@@ -34,6 +34,12 @@ const SEED_ADMINS = [
     name: "Developer",
     role: "developer" as const,
   },
+  {
+    email: "marketing@affecio.com",
+    password: "marketing@123",
+    name: "Marketing Analytics",
+    role: "marketing" as const,
+  },
 ];
 
 async function main() {

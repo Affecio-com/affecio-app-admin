@@ -3,7 +3,8 @@ export type AdminRole =
   | "admin"
   | "moderator"
   | "support"
-  | "developer";
+  | "developer"
+  | "marketing";
 
 export interface AdminUser {
   id: string;

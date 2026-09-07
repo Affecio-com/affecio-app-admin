@@ -10,7 +10,7 @@ interface UseAdminAuthReturn {
   admin: AdminUser | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<"mfa" | "success">;
   logout: () => void;
   setSession: (session: AdminSession) => void;
   refreshAdmin: () => Promise<AdminUser | null>;
@@ -60,14 +60,16 @@ export function useAdminAuth(): UseAdminAuthReturn {
   }, []);
 
   const login = useCallback(
-    async (email: string, password: string) => {
+    async (email: string, password: string): Promise<"mfa" | "success"> => {
       const result = await adminAuthService.login(email, password);
       if ("requiresMfa" in result && result.requiresMfa) {
         sessionStorage.setItem("affecio_mfa_admin_id", result.adminId);
+        sessionStorage.setItem("affecio_mfa_admin_email", email);
         router.push("/mfa");
-        return;
+        return "mfa";
       }
       setSession(result as AdminSession);
+      return "success";
     },
     [router, setSession],
   );

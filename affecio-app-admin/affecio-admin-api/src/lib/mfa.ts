@@ -86,7 +86,7 @@ export function verifyMfaCode(secret: string, code: string): boolean {
 }
 
 export function buildOtpAuthUrl(email: string, secret: string): string {
-  const label = encodeURIComponent(`Affecio Admin:${email}`);
-  const issuer = encodeURIComponent("Affecio Admin");
-  return `otpauth://totp/${label}?secret=${secret}&issuer=${issuer}&algorithm=SHA1&digits=6&period=30`;
+  const account = encodeURIComponent(email);
+  const issuer = encodeURIComponent("Affecio");
+  return `otpauth://totp/${issuer}:${account}?secret=${secret}&issuer=${issuer}&algorithm=SHA1&digits=6&period=30`;
 }

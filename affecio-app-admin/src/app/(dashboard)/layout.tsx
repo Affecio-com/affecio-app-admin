@@ -11,6 +11,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     "moderator",
     "support",
     "developer",
+    "marketing",
   ]);
 
   if (isLoading) {

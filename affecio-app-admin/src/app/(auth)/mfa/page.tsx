@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import { AffecioButton } from "@/components/affecio/AffecioButton";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { Input } from "@/components/ui/input";
@@ -14,23 +15,34 @@ export default function MfaPage() {
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [adminEmail, setAdminEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    const adminId = sessionStorage.getItem("affecio_mfa_admin_id");
+    if (!adminId) {
+      router.replace("/login");
+      return;
+    }
+    setAdminEmail(sessionStorage.getItem("affecio_mfa_admin_email"));
+  }, [router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     const adminId = sessionStorage.getItem("affecio_mfa_admin_id");
     if (!adminId) {
-      router.push("/login");
+      router.replace("/login");
       return;
     }
     setIsLoading(true);
     try {
       const session = await adminAuthService.verifyMfa(code, adminId);
       sessionStorage.removeItem("affecio_mfa_admin_id");
+      sessionStorage.removeItem("affecio_mfa_admin_email");
       setSession(session);
       router.push("/");
     } catch {
-      setError("Invalid verification code.");
+      setError("Invalid verification code. Try the latest code from your authenticator app.");
     } finally {
       setIsLoading(false);
     }
@@ -39,7 +51,11 @@ export default function MfaPage() {
   return (
     <AuthShell
       title="Two-factor authentication"
-      description="Enter the 6-digit code from your authenticator app."
+      description={
+        adminEmail
+          ? `Enter the 6-digit code for ${adminEmail}. MFA is required for this account.`
+          : "Enter the 6-digit code from your authenticator app."
+      }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
@@ -51,17 +67,23 @@ export default function MfaPage() {
             inputMode="numeric"
             placeholder="000000"
             value={code}
-            onChange={(e) => setCode(e.target.value)}
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
             required
             autoComplete="one-time-code"
+            autoFocus
             className="h-11 tracking-[0.3em]"
           />
         </div>
         {error ? <p className="text-sm text-affecio-danger">{error}</p> : null}
-        <AffecioButton type="submit" className="h-11 w-full rounded-lg" disabled={isLoading}>
-          {isLoading ? "Verifying..." : "Verify"}
+        <AffecioButton type="submit" className="h-11 w-full rounded-lg" disabled={isLoading || code.length !== 6}>
+          {isLoading ? "Verifying..." : "Verify & continue"}
         </AffecioButton>
       </form>
+      <p className="mt-6 text-center text-sm text-affecio-muted">
+        <Link href="/login" className="affecio-link">
+          ← Back to login
+        </Link>
+      </p>
     </AuthShell>
   );
 }

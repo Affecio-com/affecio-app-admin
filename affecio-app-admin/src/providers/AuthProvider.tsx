@@ -8,7 +8,7 @@ interface AuthContextValue {
   admin: AdminUser | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<"mfa" | "success">;
   logout: () => void;
   setSession: (session: AdminSession) => void;
   refreshAdmin: () => Promise<AdminUser | null>;

@@ -25,7 +25,7 @@ import { formatDateTime } from "@/lib/format";
 import { createAdminUser, getAdminUsers } from "@/services/adminUsers";
 import type { AdminRole } from "@/types/admin";
 
-const ROLES: AdminRole[] = ["super_admin", "admin", "moderator", "support", "developer"];
+const ROLES: AdminRole[] = ["super_admin", "admin", "moderator", "support", "developer", "marketing"];
 
 export default function AdminManagementPage() {
   return (

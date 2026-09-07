@@ -10,7 +10,7 @@ const router = Router();
 
 router.use(requireAdminAuth);
 
-router.get("/", requireRole("super_admin", "admin", "moderator", "support"), async (req, res) => {
+router.get("/", requireRole("super_admin", "admin", "moderator", "support", "marketing"), async (req, res) => {
   const parsed = listUsersSchema.safeParse(req.query);
   if (!parsed.success) {
     res.status(400).json({ message: "Invalid query parameters" });
@@ -20,7 +20,7 @@ router.get("/", requireRole("super_admin", "admin", "moderator", "support"), asy
   res.json(result);
 });
 
-router.get("/:id", requireRole("super_admin", "admin", "moderator", "support"), async (req, res) => {
+router.get("/:id", requireRole("super_admin", "admin", "moderator", "support", "marketing"), async (req, res) => {
   const user = await userAdminService.getUserById(getRouteParam(req.params.id));
   if (!user) {
     res.status(404).json({ message: "User not found" });

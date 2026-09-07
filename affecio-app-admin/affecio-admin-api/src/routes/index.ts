@@ -11,6 +11,7 @@ import metricsRoutes from "./metrics";
 import auditLogsRoutes from "./auditLogs";
 import supportRoutes from "./support";
 import developersRoutes from "./developers";
+import pushNotificationsRoutes from "./pushNotifications";
 import adminUsersRoutes from "./adminUsers";
 
 const router = Router();
@@ -31,6 +32,7 @@ router.use("/admin/v1/metrics", metricsRoutes);
 router.use("/admin/v1/audit-logs", auditLogsRoutes);
 router.use("/admin/v1/support", supportRoutes);
 router.use("/admin/v1/developers", developersRoutes);
+router.use("/admin/v1/push", pushNotificationsRoutes);
 router.use("/admin/v1/admin-users", adminUsersRoutes);
 
 export default router;
