@@ -4,6 +4,9 @@ const detailTitles: Record<string, string> = {
   admins: "Admin management",
   "feature-flags": "Feature flags",
   "service-health": "Service health",
+  profile: "Profile",
+  security: "Security",
+  notifications: "Notifications",
 };
 
 export function getPageTitleFromPath(pathname: string): string {

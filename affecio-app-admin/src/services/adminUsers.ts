@@ -11,7 +11,19 @@ export interface AdminAccount {
   createdAt: string;
 }
 
+export interface CreateAdminInput {
+  email: string;
+  password: string;
+  name: string;
+  role: AdminRole;
+}
+
 export async function getAdminUsers(): Promise<AdminAccount[]> {
   const { data } = await adminV1Client.get<{ data: AdminAccount[] }>("/admin-users");
+  return data.data;
+}
+
+export async function createAdminUser(input: CreateAdminInput): Promise<AdminAccount> {
+  const { data } = await adminV1Client.post<{ data: AdminAccount }>("/admin-users", input);
   return data.data;
 }

@@ -13,6 +13,8 @@ interface UseAdminAuthReturn {
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   setSession: (session: AdminSession) => void;
+  refreshAdmin: () => Promise<AdminUser | null>;
+  updateAdmin: (admin: AdminUser) => void;
 }
 
 export function useAdminAuth(): UseAdminAuthReturn {
@@ -37,6 +39,24 @@ export function useAdminAuth(): UseAdminAuthReturn {
   const setSession = useCallback((session: AdminSession) => {
     setStoredToken(session.accessToken);
     setAdmin(session.admin);
+  }, []);
+
+  const refreshAdmin = useCallback(async () => {
+    const token = getStoredToken();
+    if (!token) return null;
+    try {
+      const me = await adminAuthService.getMe();
+      setAdmin(me);
+      return me;
+    } catch {
+      clearStoredToken();
+      setAdmin(null);
+      return null;
+    }
+  }, []);
+
+  const updateAdmin = useCallback((next: AdminUser) => {
+    setAdmin(next);
   }, []);
 
   const login = useCallback(
@@ -64,5 +84,7 @@ export function useAdminAuth(): UseAdminAuthReturn {
     login,
     logout,
     setSession,
+    refreshAdmin,
+    updateAdmin,
   };
 }

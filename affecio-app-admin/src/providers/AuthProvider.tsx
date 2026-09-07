@@ -11,6 +11,8 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   setSession: (session: AdminSession) => void;
+  refreshAdmin: () => Promise<AdminUser | null>;
+  updateAdmin: (admin: AdminUser) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
