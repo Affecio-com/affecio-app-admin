@@ -1,22 +1,48 @@
 "use client";
 
-import { useState } from "react";
-import { PageHeader } from "@/components/layout/PageHeader";
-import { SearchInput } from "@/components/shared/SearchInput";
-import { EmptyState } from "@/components/shared/EmptyState";
-import { useDebounce } from "@/hooks/useDebounce";
+import Link from "next/link";
+import { DataListPage } from "@/components/layout/DataListPage";
+import { StatusPill } from "@/components/shared/StatusPill";
+import { getUsers } from "@/services/users";
+import { formatDate } from "@/lib/format";
 
 export default function UsersPage() {
-  const [search, setSearch] = useState("");
-  useDebounce(search, 300);
-
   return (
-    <div>
-      <PageHeader title="Users" description="Search and manage app users." />
-      <div className="mb-6 max-w-md">
-        <SearchInput value={search} onChange={setSearch} placeholder="Search users..." />
-      </div>
-      <EmptyState title="No users loaded" description="Connect the API to populate the users table." />
-    </div>
+    <DataListPage
+      title="Users"
+      description="Search and manage registered app users."
+      queryKey="users"
+      fetcher={({ page, pageSize, search }) => getUsers({ page, pageSize, search })}
+      searchPlaceholder="Search by name, email, or phone..."
+      emptyTitle="No users found"
+      emptyDescription="Try adjusting your search or check that the API is connected."
+      columns={[
+        {
+          key: "name",
+          header: "Name",
+          cell: (user) => (
+            <Link href={`/users/${user.id}`} className="font-medium hover:underline">
+              {user.name}
+            </Link>
+          ),
+        },
+        {
+          key: "contact",
+          header: "Contact",
+          cell: (user) => (
+            <div>
+              <div className="text-sm">{user.email ?? "—"}</div>
+              <div className="text-xs text-affecio-muted">{user.phoneNumber}</div>
+            </div>
+          ),
+        },
+        { key: "gender", header: "Gender", cell: (user) => user.gender },
+        {
+          key: "joined",
+          header: "Joined",
+          cell: (user) => formatDate(user.createdAt),
+        },
+      ]}
+    />
   );
 }

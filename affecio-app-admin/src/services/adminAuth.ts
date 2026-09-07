@@ -2,8 +2,10 @@ import { apiClient } from "@/config/api";
 import type { AdminSession, AdminUser } from "@/types/admin";
 import type { ApiResponse } from "@/types/api";
 
-export async function login(email: string, password: string): Promise<AdminSession> {
-  const { data } = await apiClient.post<ApiResponse<AdminSession>>("/admin/auth/login", {
+export type LoginResult = AdminSession | { requiresMfa: true; adminId: string };
+
+export async function login(email: string, password: string): Promise<LoginResult> {
+  const { data } = await apiClient.post<ApiResponse<LoginResult>>("/admin/auth/login", {
     email,
     password,
   });
@@ -15,7 +17,10 @@ export async function getMe(): Promise<AdminUser> {
   return data.data;
 }
 
-export async function verifyMfa(code: string): Promise<AdminSession> {
-  const { data } = await apiClient.post<ApiResponse<AdminSession>>("/admin/auth/mfa", { code });
+export async function verifyMfa(code: string, adminId: string): Promise<AdminSession> {
+  const { data } = await apiClient.post<ApiResponse<AdminSession>>("/admin/auth/mfa", {
+    code,
+    adminId,
+  });
   return data.data;
 }

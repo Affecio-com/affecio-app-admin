@@ -1,6 +1,6 @@
 "use client";
 
-import { AdminSidebar } from "@/components/layout/AdminSidebar";
+import { AdminSidebar, ADMIN_SIDEBAR_WIDTH } from "@/components/layout/AdminSidebar";
 import { AdminTopBar } from "@/components/layout/AdminTopBar";
 import { useRequireRole } from "@/hooks/useRequireRole";
 
@@ -24,9 +24,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen min-w-desktop bg-affecio-bg">
       <AdminSidebar />
-      <div className="ml-[240px] flex min-h-screen flex-col">
+      <div className="flex min-h-screen flex-col" style={{ marginLeft: ADMIN_SIDEBAR_WIDTH }}>
         <AdminTopBar />
-        <main className="flex-1 px-8 py-6">
+        <main className="flex-1 px-6 py-6">
           <div className="mx-auto w-full max-w-content">{children}</div>
         </main>
       </div>

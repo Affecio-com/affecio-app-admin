@@ -13,7 +13,8 @@ router.use(requireAdminAuth, requireRole("super_admin", "admin", "moderator"));
 router.get("/", async (req, res) => {
   const page = z.coerce.number().default(1).parse(req.query.page);
   const pageSize = z.coerce.number().default(20).parse(req.query.pageSize);
-  const result = await verificationService.listVerificationQueue(page, pageSize);
+  const status = z.enum(["pending", "approved", "rejected"]).optional().parse(req.query.status);
+  const result = await verificationService.listVerificationQueue(page, pageSize, status);
   res.json(result);
 });
 

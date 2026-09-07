@@ -26,7 +26,7 @@ export function DataTable<T extends { id: string }>({
   emptyMessage = "No results found.",
 }: DataTableProps<T>) {
   if (data.length === 0) {
-    return <div className="py-8 text-center text-sm text-muted-foreground">{emptyMessage}</div>;
+    return <div className="py-8 text-center text-sm text-affecio-muted">{emptyMessage}</div>;
   }
 
   return (

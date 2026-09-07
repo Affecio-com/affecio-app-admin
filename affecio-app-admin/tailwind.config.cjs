@@ -40,7 +40,7 @@ module.exports = {
       fontFamily: {
         sans: ["var(--font-poppins)", "system-ui", "sans-serif"],
         poppins: ["var(--font-poppins)", "sans-serif"],
-        mondwest: ["var(--font-mondwest)", "serif"],
+        mondwest: ["var(--font-mondwest)", "var(--font-poppins)", "system-ui", "sans-serif"],
         display: ["var(--font-mondwest)", "var(--font-poppins)", "system-ui", "sans-serif"],
         mono: ["var(--font-neuebit)", "monospace"],
       },

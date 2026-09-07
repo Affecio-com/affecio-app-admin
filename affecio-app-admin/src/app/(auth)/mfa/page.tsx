@@ -18,9 +18,15 @@ export default function MfaPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    const adminId = sessionStorage.getItem("affecio_mfa_admin_id");
+    if (!adminId) {
+      router.push("/login");
+      return;
+    }
     setIsLoading(true);
     try {
-      const session = await adminAuthService.verifyMfa(code);
+      const session = await adminAuthService.verifyMfa(code, adminId);
+      sessionStorage.removeItem("affecio_mfa_admin_id");
       setSession(session);
       router.push("/");
     } catch {
@@ -33,12 +39,12 @@ export default function MfaPage() {
   return (
     <AuthShell
       title="Two-factor authentication"
-      description="Enter the 6-digit code from your authenticator app to complete sign in."
+      description="Enter the 6-digit code from your authenticator app."
     >
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
           <label htmlFor="mfa-code" className="text-sm font-medium text-affecio-text">
-            Verification code <span className="text-affecio-accent">*</span>
+            Verification code
           </label>
           <Input
             id="mfa-code"
@@ -52,7 +58,7 @@ export default function MfaPage() {
           />
         </div>
         {error ? <p className="text-sm text-affecio-danger">{error}</p> : null}
-        <AffecioButton type="submit" className="h-11 w-full rounded-xl" disabled={isLoading}>
+        <AffecioButton type="submit" className="h-11 w-full rounded-lg" disabled={isLoading}>
           {isLoading ? "Verifying..." : "Verify"}
         </AffecioButton>
       </form>

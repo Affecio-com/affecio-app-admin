@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { ChevronRight } from "lucide-react";
+import { AffecioCard } from "@/components/affecio/AffecioCard";
 import { cn } from "@/lib/utils";
 
 interface AffecioMenuRowProps {
@@ -36,7 +37,7 @@ export function AffecioMenuRow({
   );
 
   const classes = cn(
-    "flex items-center justify-between border-b border-[rgba(255,255,255,0.12)] px-4 py-3.5 transition-colors last:border-b-0 hover:bg-affecio-input",
+    "flex items-center justify-between px-5 py-4 transition-colors hover:bg-affecio-input",
     className,
   );
 
@@ -52,5 +53,18 @@ export function AffecioMenuRow({
     <button type="button" onClick={onClick} className={cn(classes, "w-full text-left")}>
       {content}
     </button>
+  );
+}
+
+interface AffecioMenuListProps {
+  children: ReactNode;
+  className?: string;
+}
+
+export function AffecioMenuList({ children, className }: AffecioMenuListProps) {
+  return (
+    <AffecioCard padding="none" className={cn("divide-y divide-affecio-divider overflow-hidden", className)}>
+      {children}
+    </AffecioCard>
   );
 }

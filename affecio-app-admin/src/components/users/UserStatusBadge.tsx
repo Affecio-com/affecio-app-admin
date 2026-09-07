@@ -1,13 +1,16 @@
 import { Badge } from "@/components/ui/badge";
-import type { UserStatus } from "@/types/user";
 
-const statusVariant: Record<UserStatus, "success" | "warning" | "destructive" | "secondary"> = {
-  active: "success",
-  pending: "warning",
-  suspended: "warning",
-  banned: "destructive",
+type UserStatus = "active" | "suspended" | "banned" | "pending";
+
+const labels: Record<UserStatus, string> = {
+  active: "Active",
+  suspended: "Suspended",
+  banned: "Banned",
+  pending: "Pending",
 };
 
 export function UserStatusBadge({ status }: { status: UserStatus }) {
-  return <Badge variant={statusVariant[status]}>{status}</Badge>;
+  const variant =
+    status === "active" ? "success" : status === "banned" ? "destructive" : "secondary";
+  return <Badge variant={variant}>{labels[status]}</Badge>;
 }

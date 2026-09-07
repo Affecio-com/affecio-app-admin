@@ -1,8 +1,8 @@
 import { prisma } from "../lib/prisma";
 import { getPresignedMediaUrl } from "../lib/r2";
 
-export async function listVerificationQueue(page: number, pageSize: number) {
-  const where = { status: "pending" as const };
+export async function listVerificationQueue(page: number, pageSize: number, status?: string) {
+  const where = status ? { status: status as "pending" | "approved" | "rejected" } : {};
   const [data, total] = await Promise.all([
     prisma.verification.findMany({
       where,

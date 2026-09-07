@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { DataTable } from "@/components/shared/DataTable";
-import { UserStatusBadge } from "@/components/users/UserStatusBadge";
 import type { AppUser } from "@/types/user";
+import { formatDate } from "@/lib/format";
 
 interface UsersTableProps {
   users: AppUser[];
@@ -16,23 +16,28 @@ export function UsersTable({ users }: UsersTableProps) {
       columns={[
         {
           key: "name",
-          header: "User",
+          header: "Name",
           cell: (user) => (
             <Link href={`/users/${user.id}`} className="font-medium hover:underline">
-              {user.displayName}
+              {user.name}
             </Link>
           ),
         },
-        { key: "email", header: "Email", cell: (user) => user.email },
         {
-          key: "status",
-          header: "Status",
-          cell: (user) => <UserStatusBadge status={user.status} />,
+          key: "contact",
+          header: "Contact",
+          cell: (user) => (
+            <div>
+              <div>{user.email ?? "—"}</div>
+              <div className="text-xs text-affecio-muted">{user.phoneNumber}</div>
+            </div>
+          ),
         },
+        { key: "gender", header: "Gender", cell: (user) => user.gender },
         {
           key: "created",
           header: "Joined",
-          cell: (user) => new Date(user.createdAt).toLocaleDateString(),
+          cell: (user) => formatDate(user.createdAt),
         },
       ]}
     />

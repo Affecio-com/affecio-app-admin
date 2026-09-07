@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { AdminSession, AdminUser } from "@/types/admin";
 import { clearStoredToken, getStoredToken, setStoredToken } from "@/lib/auth-storage";
 import * as adminAuthService from "@/services/adminAuth";
@@ -15,6 +16,7 @@ interface UseAdminAuthReturn {
 }
 
 export function useAdminAuth(): UseAdminAuthReturn {
+  const router = useRouter();
   const [admin, setAdmin] = useState<AdminUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -37,10 +39,18 @@ export function useAdminAuth(): UseAdminAuthReturn {
     setAdmin(session.admin);
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
-    const session = await adminAuthService.login(email, password);
-    setSession(session);
-  }, [setSession]);
+  const login = useCallback(
+    async (email: string, password: string) => {
+      const result = await adminAuthService.login(email, password);
+      if ("requiresMfa" in result && result.requiresMfa) {
+        sessionStorage.setItem("affecio_mfa_admin_id", result.adminId);
+        router.push("/mfa");
+        return;
+      }
+      setSession(result as AdminSession);
+    },
+    [router, setSession],
+  );
 
   const logout = useCallback(() => {
     clearStoredToken();

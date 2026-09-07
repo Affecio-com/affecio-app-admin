@@ -1,6 +1,6 @@
 import { AffecioCard } from "@/components/affecio/AffecioCard";
-import { UserStatusBadge } from "@/components/users/UserStatusBadge";
 import type { AppUser } from "@/types/user";
+import { formatDateTime } from "@/lib/format";
 
 interface UserDetailPanelProps {
   user: AppUser;
@@ -11,18 +11,21 @@ export function UserDetailPanel({ user }: UserDetailPanelProps) {
     <AffecioCard>
       <div className="space-y-4">
         <div>
-          <h2 className="text-xl font-semibold">{user.displayName}</h2>
-          <p className="text-sm text-muted-foreground">{user.email}</p>
+          <h2 className="font-mondwest text-xl font-semibold">{user.name}</h2>
+          <p className="text-sm text-affecio-muted">{user.email ?? user.phoneNumber}</p>
         </div>
-        <UserStatusBadge status={user.status} />
         <dl className="grid gap-3 text-sm">
           <div>
-            <dt className="text-muted-foreground">User ID</dt>
-            <dd>{user.id}</dd>
+            <dt className="text-affecio-muted">User ID</dt>
+            <dd className="font-mono text-xs">{user.id}</dd>
           </div>
           <div>
-            <dt className="text-muted-foreground">Joined</dt>
-            <dd>{new Date(user.createdAt).toLocaleString()}</dd>
+            <dt className="text-affecio-muted">Gender</dt>
+            <dd>{user.gender}</dd>
+          </div>
+          <div>
+            <dt className="text-affecio-muted">Joined</dt>
+            <dd>{formatDateTime(user.createdAt)}</dd>
           </div>
         </dl>
       </div>

@@ -1,15 +1,23 @@
 import { PageHeader } from "@/components/layout/PageHeader";
-import { AffecioMenuRow } from "@/components/affecio/AffecioMenuRow";
+import { AffecioMenuList, AffecioMenuRow } from "@/components/affecio/AffecioMenuRow";
 
 export default function DevelopersPage() {
   return (
     <div>
-      <PageHeader title="Developers" description="Health checks, flags, and logs." />
-      <div className="space-y-3">
-        <AffecioMenuRow href="/developers/feature-flags" label="Feature flags" description="Toggle platform features" />
-        <AffecioMenuRow label="Service health" description="API and worker status" />
+      <PageHeader title="Developers" description="Health checks, feature flags, and service logs." />
+      <AffecioMenuList>
+        <AffecioMenuRow
+          href="/developers/feature-flags"
+          label="Feature flags"
+          description="Toggle platform features"
+        />
+        <AffecioMenuRow
+          href="/developers/service-health"
+          label="Service health"
+          description="API and worker status"
+        />
         <AffecioMenuRow label="Logs" description="Recent error and audit logs" />
-      </div>
+      </AffecioMenuList>
     </div>
   );
 }

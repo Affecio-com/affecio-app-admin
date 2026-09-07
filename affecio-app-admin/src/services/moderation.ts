@@ -1,4 +1,4 @@
-import { apiClient } from "@/config/api";
+import { adminV1Client } from "@/config/api";
 import type { PaginatedResponse } from "@/types/api";
 
 export interface ModerationFlag {
@@ -14,9 +14,8 @@ export async function getModerationFlags(params?: {
   page?: number;
   pageSize?: number;
 }): Promise<PaginatedResponse<ModerationFlag>> {
-  const { data } = await apiClient.get<PaginatedResponse<ModerationFlag>>(
-    "/admin/moderation",
-    { params },
-  );
+  const { data } = await adminV1Client.get<PaginatedResponse<ModerationFlag>>("/moderation", {
+    params,
+  });
   return data;
 }

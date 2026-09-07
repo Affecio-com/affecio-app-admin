@@ -1,11 +1,20 @@
-export type UserStatus = "active" | "suspended" | "banned" | "pending";
-
 export interface AppUser {
   id: string;
-  email: string;
-  displayName: string;
-  status: UserStatus;
-  verified: boolean;
+  email: string | null;
+  phoneNumber: string;
+  name: string;
+  gender: string;
   createdAt: string;
-  lastActiveAt?: string;
+  updatedAt: string;
+}
+
+export interface AppUserDetail extends AppUser {
+  aboutMe?: string | null;
+  UserMedia?: Array<{
+    id: string;
+    kind: string;
+    status: string;
+    publicUrl: string | null;
+    createdAt: string;
+  }>;
 }

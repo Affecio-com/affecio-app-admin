@@ -13,6 +13,9 @@
   --affecio-danger: #ff3b30;
   --affecio-link: #4fc3f7;
   --affecio-divider: rgba(255, 255, 255, 0.12);
+  --affecio-panel: #0d0d0d;
+  --affecio-sidebar: #000000;
+  --affecio-topbar: #000000;
 
   /* shadcn-compatible aliases */
   --background: var(--affecio-bg);
@@ -55,6 +58,7 @@
   --color-affecio-accent: var(--affecio-accent);
   --color-affecio-danger: var(--affecio-danger);
   --color-affecio-link: var(--affecio-link);
+  --color-affecio-panel: var(--affecio-panel);
   --font-sans: var(--font-poppins);
   --font-display: var(--font-mondwest);
   --font-mono: var(--font-neuebit);
@@ -71,6 +75,10 @@ body {
 }
 
 .font-display {
+  font-family: var(--font-mondwest), var(--font-poppins), system-ui, sans-serif;
+}
+
+.font-mondwest {
   font-family: var(--font-mondwest), var(--font-poppins), system-ui, sans-serif;
 }
 

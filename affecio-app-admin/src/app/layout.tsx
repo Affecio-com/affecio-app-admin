@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import localFont from "next/font/local";
 import { Poppins } from "next/font/google";
 import { AuthProvider } from "@/providers/AuthProvider";
 import { QueryProvider } from "@/providers/QueryProvider";
@@ -12,17 +13,14 @@ const poppins = Poppins({
   display: "swap",
 });
 
-// Swap to localFont when PPMondWest-Regular.woff2 + PPNeueBit-Bold.woff2 are in public/fonts/
-const mondwest = Poppins({
-  subsets: ["latin"],
-  weight: ["600"],
+const mondwest = localFont({
+  src: "../../public/fonts/ppmondwest-regular.otf",
   variable: "--font-mondwest",
   display: "swap",
 });
 
-const neuebit = Poppins({
-  subsets: ["latin"],
-  weight: ["700"],
+const neuebit = localFont({
+  src: "../../public/fonts/ppneuebit-bold.otf",
   variable: "--font-neuebit",
   display: "swap",
 });

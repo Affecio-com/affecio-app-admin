@@ -1,6 +1,6 @@
-import { adminV1Client, apiClient } from "@/config/api";
+import { adminV1Client } from "@/config/api";
 import type { PaginatedResponse } from "@/types/api";
-import type { AppUser } from "@/types/user";
+import type { AppUser, AppUserDetail } from "@/types/user";
 
 export async function getUsers(params?: {
   page?: number;
@@ -11,7 +11,7 @@ export async function getUsers(params?: {
   return data;
 }
 
-export async function getUser(id: string): Promise<AppUser> {
-  const { data } = await adminV1Client.get<{ data: AppUser }>(`/users/${id}`);
+export async function getUser(id: string): Promise<AppUserDetail> {
+  const { data } = await adminV1Client.get<{ data: AppUserDetail }>(`/users/${id}`);
   return data.data;
 }
