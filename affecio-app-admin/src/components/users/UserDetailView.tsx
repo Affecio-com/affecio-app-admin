@@ -4,11 +4,11 @@ import Link from "next/link";
 import { AffecioCard } from "@/components/affecio/AffecioCard";
 import { AffecioStatCard } from "@/components/affecio/AffecioStatCard";
 import { DataTable } from "@/components/shared/DataTable";
-import { StatusPill, callStatusTone } from "@/components/shared/StatusPill";
+import { StatusPill, callStatusTone, accountStatusTone, activityStatusTone, reportStatusTone, verificationStatusTone } from "@/components/shared/StatusPill";
 import type { AppUserDetail } from "@/types/user";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { Ban, Heart, ImageIcon, Phone, Repeat, Shield } from "lucide-react";
+import { Ban, Flag, Heart, ImageIcon, Phone, Repeat, Shield, UserCheck } from "lucide-react";
 
 function DetailField({
   label,
@@ -97,10 +97,115 @@ export function UserDetailView({ user }: UserDetailViewProps) {
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <AffecioStatCard label="Profile complete" value={`${user.profileCompleteness}%`} icon={UserCheck} />
+        <AffecioStatCard label="Open reports" value={user.reportsSummary.openAsTarget} icon={Flag} />
         <AffecioStatCard label="Matches" value={user.stats.matchesCount} icon={Heart} />
         <AffecioStatCard label="Media" value={user.stats.mediaCount} icon={ImageIcon} />
+      </div>
+
+      <DetailSection title="Account & moderation">
+        <dl>
+          <DetailField
+            label="Account status"
+            value={<StatusPill label={user.accountStatus} tone={accountStatusTone(user.accountStatus)} />}
+          />
+          <DetailField
+            label="Activity status"
+            value={
+              <StatusPill label={user.activityStatus} tone={activityStatusTone(user.activityStatus)} />
+            }
+          />
+          <DetailField
+            label="Verification"
+            value={
+              <StatusPill
+                label={user.verificationStatus}
+                tone={verificationStatusTone(user.verificationStatus)}
+              />
+            }
+          />
+          <DetailField label="Status reason" value={user.statusReason} />
+          <DetailField label="Admin notes" value={user.adminNotes} />
+          <DetailField
+            label="Status changed"
+            value={user.statusChangedAt ? formatDateTime(user.statusChangedAt) : "—"}
+          />
+          <DetailField label="Last app activity" value={formatDateTime(user.updatedAt)} />
+          <DetailField
+            label="Push devices"
+            value={user.pushTokens.length ? `${user.pushTokens.length} registered` : "None"}
+          />
+        </dl>
+      </DetailSection>
+
+      <div className="grid gap-6 xl:grid-cols-2">
+        <DetailSection title="Report summary">
+          <dl>
+            <DetailField label="Reports against user" value={user.reportsSummary.totalAsTarget} />
+            <DetailField label="Open reports" value={user.reportsSummary.openAsTarget} />
+            <DetailField label="Reports filed by user" value={user.reportsSummary.filedByUser} />
+          </dl>
+        </DetailSection>
+
+        <DetailSection title="Media & verification summary">
+          <dl>
+            <DetailField label="Total media" value={user.mediaSummary.total} />
+            <DetailField label="Confirmed / pending" value={`${user.mediaSummary.confirmed} / ${user.mediaSummary.pending}`} />
+            <DetailField label="Profile photo" value={user.mediaSummary.hasProfilePhoto ? "Yes" : "No"} />
+            <DetailField label="Intro video" value={user.mediaSummary.hasIntroVideo ? "Yes" : "No"} />
+            <DetailField label="ID verified" value={user.mediaSummary.isVerified ? "Yes" : "No"} />
+          </dl>
+        </DetailSection>
+      </div>
+
+      <DetailSection
+        title="Reports against this user"
+        description={`${user.reportsAsTarget.length} report(s) on record.`}
+      >
+        {user.reportsAsTarget.length === 0 ? (
+          <p className="text-sm text-affecio-muted">No reports filed against this user.</p>
+        ) : (
+          <DataTable
+            data={user.reportsAsTarget}
+            columns={[
+              { key: "type", header: "Type", cell: (r) => <StatusPill label={r.type} tone="muted" /> },
+              {
+                key: "status",
+                header: "Status",
+                cell: (r) => <StatusPill label={r.status} tone={reportStatusTone(r.status)} />,
+              },
+              { key: "reason", header: "Reason", cell: (r) => r.reason },
+              { key: "when", header: "Filed", cell: (r) => formatDateTime(r.createdAt) },
+            ]}
+          />
+        )}
+      </DetailSection>
+
+      <DetailSection title="Verification history">
+        {user.verifications.length === 0 ? (
+          <p className="text-sm text-affecio-muted">No verification submissions.</p>
+        ) : (
+          <DataTable
+            data={user.verifications}
+            columns={[
+              {
+                key: "status",
+                header: "Status",
+                cell: (v) => <StatusPill label={v.status} tone={verificationStatusTone(v.status)} />,
+              },
+              { key: "media", header: "Media key", cell: (v) => <span className="font-mono text-xs">{v.mediaKey}</span> },
+              { key: "submitted", header: "Submitted", cell: (v) => formatDateTime(v.submittedAt) },
+              { key: "reviewed", header: "Reviewed", cell: (v) => (v.reviewedAt ? formatDateTime(v.reviewedAt) : "—") },
+            ]}
+          />
+        )}
+      </DetailSection>
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <AffecioStatCard label="Calls" value={user.stats.callsCount} icon={Phone} />
         <AffecioStatCard label="Blocks given" value={user.stats.blocksGivenCount} icon={Ban} />
+        <AffecioStatCard label="Swipes sent" value={user.stats.swipesSentCount} icon={Repeat} />
+        <AffecioStatCard label="Swipes received" value={user.stats.swipesReceivedCount} icon={Shield} />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">

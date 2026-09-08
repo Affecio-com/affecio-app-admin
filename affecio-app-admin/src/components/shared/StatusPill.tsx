@@ -53,3 +53,46 @@ export function callStatusTone(status: string): keyof typeof toneStyles {
       return "default";
   }
 }
+
+export function accountStatusTone(status: string): keyof typeof toneStyles {
+  switch (status) {
+    case "active":
+      return "success";
+    case "suspended":
+      return "warning";
+    case "banned":
+      return "danger";
+    default:
+      return "muted";
+  }
+}
+
+export function activityStatusTone(status: string): keyof typeof toneStyles {
+  switch (status) {
+    case "active":
+      return "success";
+    case "recent":
+      return "default";
+    case "inactive":
+      return "warning";
+    case "dormant":
+      return "muted";
+    default:
+      return "muted";
+  }
+}
+
+export function verificationStatusTone(status: string): keyof typeof toneStyles {
+  switch (status) {
+    case "approved":
+      return "success";
+    case "pending":
+      return "warning";
+    case "rejected":
+      return "danger";
+    case "none":
+      return "muted";
+    default:
+      return "default";
+  }
+}

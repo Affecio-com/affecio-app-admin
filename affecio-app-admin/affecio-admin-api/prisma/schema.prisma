@@ -6,6 +6,23 @@ datasource db {
   provider = "postgresql"
 }
 
+enum UserAccountStatus {
+  active
+  suspended
+  banned
+}
+
+model UserAdminMeta {
+  userId          String            @id
+  status          UserAccountStatus @default(active)
+  adminNotes      String?
+  statusReason    String?
+  statusChangedAt DateTime?
+  statusChangedBy String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+}
+
 model Block {
   id                         String   @id
   blockerId                  String

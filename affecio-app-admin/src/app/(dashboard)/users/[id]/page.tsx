@@ -6,6 +6,7 @@ import { use } from "react";
 import { AffecioCard } from "@/components/affecio/AffecioCard";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { UserDetailView } from "@/components/users/UserDetailView";
+import { UserAdminActions } from "@/components/users/UserAdminActions";
 import { TableSkeleton } from "@/components/shared/LoadingSkeleton";
 import { ApiErrorMessage } from "@/components/shared/ApiErrorMessage";
 import { formatDate } from "@/lib/format";
@@ -28,12 +29,15 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
             : `Loading user ${id}…`
         }
         action={
-          <Link
-            href="/users"
-            className="text-sm text-affecio-muted transition-colors hover:text-affecio-text"
-          >
-            ← Back to users
-          </Link>
+          <div className="flex flex-col items-end gap-3">
+            <Link
+              href="/users"
+              className="text-sm text-affecio-muted transition-colors hover:text-affecio-text"
+            >
+              ← Back to users
+            </Link>
+            {user ? <UserAdminActions user={user} /> : null}
+          </div>
         }
       />
 

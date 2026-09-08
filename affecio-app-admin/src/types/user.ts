@@ -1,3 +1,7 @@
+export type AccountStatus = "active" | "suspended" | "banned";
+export type ActivityStatus = "active" | "recent" | "inactive" | "dormant";
+export type VerificationStatus = "none" | "pending" | "approved" | "rejected";
+
 export interface UserRef {
   id: string;
   name: string;
@@ -13,6 +17,13 @@ export interface AppUser {
   gender: string;
   createdAt: string;
   updatedAt: string;
+  accountStatus: AccountStatus;
+  activityStatus: ActivityStatus;
+  reportsCount: number;
+  openReportsCount: number;
+  verificationStatus: VerificationStatus | string;
+  profileCompleteness: number;
+  mediaCount: number;
 }
 
 export interface UserMediaItem {
@@ -58,6 +69,24 @@ export interface UserCallItem {
   otherUser: UserRef;
 }
 
+export interface UserReportItem {
+  id: string;
+  type: string;
+  status: string;
+  reason: string;
+  reporterId?: string;
+  targetId?: string;
+  createdAt: string;
+}
+
+export interface UserVerificationItem {
+  id: string;
+  status: string;
+  mediaKey: string;
+  submittedAt: string;
+  reviewedAt: string | null;
+}
+
 export interface AppUserDetail {
   id: string;
   phoneNumber: string;
@@ -74,6 +103,27 @@ export interface AppUserDetail {
   customAnswer: string | null;
   createdAt: string;
   updatedAt: string;
+  accountStatus: AccountStatus;
+  activityStatus: ActivityStatus;
+  statusReason: string | null;
+  adminNotes: string | null;
+  statusChangedAt: string | null;
+  verificationStatus: VerificationStatus | string;
+  profileCompleteness: number;
+  reportsSummary: {
+    totalAsTarget: number;
+    openAsTarget: number;
+    filedByUser: number;
+  };
+  mediaSummary: {
+    total: number;
+    confirmed: number;
+    pending: number;
+    hasProfilePhoto: boolean;
+    hasIntroVideo: boolean;
+    isVerified: boolean;
+  };
+  pushTokens: { id: string; platform: string; updatedAt: string }[];
   stats: {
     mediaCount: number;
     matchesCount: number;
@@ -83,6 +133,9 @@ export interface AppUserDetail {
     swipesReceivedCount: number;
     callsCount: number;
   };
+  reportsAsTarget: UserReportItem[];
+  reportsFiled: UserReportItem[];
+  verifications: UserVerificationItem[];
   media: UserMediaItem[];
   matches: UserMatchItem[];
   blocksGiven: UserBlockItem[];
@@ -90,4 +143,30 @@ export interface AppUserDetail {
   swipesSent: UserSwipeItem[];
   swipesReceived: UserSwipeItem[];
   calls: UserCallItem[];
+}
+
+export interface CreateAppUserInput {
+  name: string;
+  phoneNumber: string;
+  email?: string | null;
+  gender: string;
+  birthday: string;
+  lookingFor?: string[];
+  aboutMe?: string | null;
+  startConversation?: string | null;
+  comfortableWith?: string | null;
+}
+
+export interface UpdateAppUserInput {
+  name?: string;
+  email?: string | null;
+  phoneNumber?: string;
+  gender?: string;
+  aboutMe?: string | null;
+  startConversation?: string | null;
+  comfortableWith?: string | null;
+  lookingFor?: string[];
+  accountStatus?: AccountStatus;
+  statusReason?: string | null;
+  adminNotes?: string | null;
 }
