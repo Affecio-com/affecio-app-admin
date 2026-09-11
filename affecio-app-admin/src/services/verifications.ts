@@ -1,5 +1,6 @@
 import { adminV1Client } from "@/config/api";
 import type { PaginatedResponse } from "@/types/api";
+import type { UserRef } from "@/types/user";
 
 export interface VerificationItem {
   id: string;
@@ -10,6 +11,7 @@ export interface VerificationItem {
   submittedAt: string;
   reviewedAt?: string | null;
   reviewedBy?: string | null;
+  user?: UserRef | null;
 }
 
 export async function getVerificationQueue(params?: {

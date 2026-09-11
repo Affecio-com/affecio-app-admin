@@ -21,8 +21,9 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { StatusPill } from "@/components/shared/StatusPill";
 import { TableSkeleton } from "@/components/shared/LoadingSkeleton";
 import { ApiErrorMessage } from "@/components/shared/ApiErrorMessage";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, formatRelativeTime } from "@/lib/format";
 import { createAdminUser, getAdminUsers } from "@/services/adminUsers";
+import { isStrongPassword, STRONG_PASSWORD_HINT } from "@/lib/password-policy";
 import type { AdminRole } from "@/types/admin";
 
 const ROLES: AdminRole[] = ["super_admin", "admin", "moderator", "support", "developer", "marketing"];
@@ -112,6 +113,11 @@ function AdminUsersContent() {
                 header: "Last login",
                 cell: (a) => (a.lastLoginAt ? formatDateTime(a.lastLoginAt) : "Never"),
               },
+              {
+                key: "lastActivity",
+                header: "Last activity",
+                cell: (a) => formatRelativeTime(a.lastActivityAt),
+              },
             ]}
           />
         )}
@@ -121,7 +127,9 @@ function AdminUsersContent() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add admin</DialogTitle>
-            <DialogDescription>Create a new admin account with a role and temporary password.</DialogDescription>
+            <DialogDescription>
+              Create a new admin account. Temporary password: {STRONG_PASSWORD_HINT}
+            </DialogDescription>
           </DialogHeader>
           {formError ? (
             <ApiErrorMessage message={formError} />
@@ -140,7 +148,7 @@ function AdminUsersContent() {
             />
             <Input
               type="password"
-              placeholder="Temporary password (min 8 chars)"
+              placeholder="Temporary password (12+ chars, mixed case, number, symbol)"
               value={form.password}
               onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
             />
@@ -165,7 +173,8 @@ function AdminUsersContent() {
                 createMutation.isPending ||
                 !form.name ||
                 !form.email ||
-                form.password.length < 8
+                form.password.length < 12 ||
+                !isStrongPassword(form.password)
               }
               onClick={() => createMutation.mutate(form)}
             >

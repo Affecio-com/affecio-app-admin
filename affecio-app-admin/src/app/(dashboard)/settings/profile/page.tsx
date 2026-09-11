@@ -8,7 +8,8 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { SettingsBackLink, SettingsSection } from "@/components/settings/SettingsSections";
 import { ApiErrorMessage } from "@/components/shared/ApiErrorMessage";
 import { StatusPill } from "@/components/shared/StatusPill";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, formatRelativeTime } from "@/lib/format";
+import { getSessionStartedAt } from "@/lib/auth-storage";
 import { updateProfile } from "@/services/adminAuth";
 import { useAuth } from "@/providers/AuthProvider";
 
@@ -39,7 +40,7 @@ export default function ProfileSettingsPage() {
       <PageHeader title="Profile" description="Your admin account details." action={<SettingsBackLink />} />
 
       <SettingsSection title="Account information">
-        {message ? <p className="mb-4 text-sm text-emerald-400">{message}</p> : null}
+        {message ? <p className="mb-4 text-sm text-emerald-700 dark:text-emerald-400">{message}</p> : null}
         {error ? (
           <div className="mb-4">
             <ApiErrorMessage message={error} />
@@ -63,6 +64,12 @@ export default function ProfileSettingsPage() {
           <div className="text-sm text-affecio-muted">
             Member since {formatDateTime(admin.createdAt)}
             {admin.lastLoginAt ? ` · Last login ${formatDateTime(admin.lastLoginAt)}` : null}
+          </div>
+          <div className="text-sm text-affecio-muted">
+            Last activity {formatRelativeTime(admin.lastActivityAt)}
+            {getSessionStartedAt()
+              ? ` · This session started ${formatDateTime(getSessionStartedAt()!)}`
+              : null}
           </div>
           <AffecioButton
             disabled={mutation.isPending || !name.trim() || name.trim() === admin.name}

@@ -4,7 +4,8 @@ import Link from "next/link";
 import { ChevronRight, Shield, ShieldCheck, ShieldOff } from "lucide-react";
 import { AffecioCard } from "@/components/affecio/AffecioCard";
 import { StatusPill } from "@/components/shared/StatusPill";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, formatRelativeTime } from "@/lib/format";
+import { getSessionStartedAt } from "@/lib/auth-storage";
 import { useAuth } from "@/providers/AuthProvider";
 
 export function SettingsProfileCard() {
@@ -16,12 +17,12 @@ export function SettingsProfileCard() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-affecio-muted">Signed in as</p>
-          <h2 className="mt-1 font-mondwest text-xl font-semibold text-affecio-text">{admin.name}</h2>
+          <h2 className="mt-1 text-xl font-semibold tracking-tight text-affecio-text">{admin.name}</h2>
           <p className="mt-1 text-sm text-affecio-muted">{admin.email}</p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <StatusPill label={admin.role.replace(/_/g, " ")} />
             {admin.mfaEnabled ? (
-              <span className="inline-flex items-center gap-1 text-xs text-emerald-400">
+              <span className="inline-flex items-center gap-1 text-xs text-emerald-700 dark:text-emerald-400">
                 <ShieldCheck className="h-3.5 w-3.5" />
                 MFA enabled
               </span>
@@ -39,6 +40,10 @@ export function SettingsProfileCard() {
           ) : (
             <p>First session</p>
           )}
+          <p>Last activity {formatRelativeTime(admin.lastActivityAt)}</p>
+          {getSessionStartedAt() ? (
+            <p>This session since {formatDateTime(getSessionStartedAt()!)}</p>
+          ) : null}
           <Link
             href="/settings/profile"
             className="mt-2 inline-flex items-center gap-1 text-affecio-link hover:underline"
@@ -64,7 +69,7 @@ export function SettingsSection({
   return (
     <AffecioCard>
       <div className="mb-4">
-        <h2 className="font-mondwest text-lg font-semibold text-affecio-text">{title}</h2>
+        <h2 className="text-lg font-semibold tracking-tight text-affecio-text">{title}</h2>
         {description ? <p className="mt-1 text-sm text-affecio-muted">{description}</p> : null}
       </div>
       {children}

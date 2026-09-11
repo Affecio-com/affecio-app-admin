@@ -2,25 +2,31 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 const AUTH_PATHS = ["/login", "/mfa"];
-const TOKEN_COOKIE = "affecio_admin_token";
+const SESSION_COOKIE = "affecio_admin_session";
+const STALE_JWT_COOKIE = "affecio_admin_token";
+
+function withClearedStaleJwt(response: NextResponse) {
+  response.cookies.set(STALE_JWT_COOKIE, "", { path: "/", maxAge: 0 });
+  return response;
+}
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const token = request.cookies.get(TOKEN_COOKIE)?.value;
+  const hasSession = Boolean(request.cookies.get(SESSION_COOKIE)?.value);
   const isAuthRoute = AUTH_PATHS.some((path) => pathname.startsWith(path));
 
   if (isAuthRoute) {
-    if (token) {
-      return NextResponse.redirect(new URL("/", request.url));
+    if (hasSession) {
+      return withClearedStaleJwt(NextResponse.redirect(new URL("/", request.url)));
     }
-    return NextResponse.next();
+    return withClearedStaleJwt(NextResponse.next());
   }
 
-  if (!token) {
-    return NextResponse.redirect(new URL("/login", request.url));
+  if (!hasSession) {
+    return withClearedStaleJwt(NextResponse.redirect(new URL("/login", request.url)));
   }
 
-  return NextResponse.next();
+  return withClearedStaleJwt(NextResponse.next());
 }
 
 export const config = {

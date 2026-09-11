@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { requireAdminAuth } from "../middleware/requireAdminAuth";
 import { requireRole } from "../middleware/requireRole";
+import { getProfilePhotoMap, withPhoto } from "../lib/profilePhotos";
 
 const router = Router();
 
@@ -18,12 +19,14 @@ router.get("/", async (req, res) => {
       take: pageSize,
       orderBy: { createdAt: "desc" },
       include: {
-        User_Block_blockerIdToUser: { select: { id: true, name: true, email: true } },
-        User_Block_blockedIdToUser: { select: { id: true, name: true, email: true } },
+        User_Block_blockerIdToUser: { select: { id: true, name: true, email: true, phoneNumber: true } },
+        User_Block_blockedIdToUser: { select: { id: true, name: true, email: true, phoneNumber: true } },
       },
     }),
     prisma.block.count(),
   ]);
+
+  const photos = await getProfilePhotoMap(rows.flatMap((r) => [r.blockerId, r.blockedId]));
 
   res.json({
     data: rows.map((row) => ({
@@ -31,8 +34,8 @@ router.get("/", async (req, res) => {
       blockerId: row.blockerId,
       blockedId: row.blockedId,
       createdAt: row.createdAt,
-      blocker: row.User_Block_blockerIdToUser,
-      blocked: row.User_Block_blockedIdToUser,
+      blocker: withPhoto(row.User_Block_blockerIdToUser, photos),
+      blocked: withPhoto(row.User_Block_blockedIdToUser, photos),
     })),
     total,
     page,

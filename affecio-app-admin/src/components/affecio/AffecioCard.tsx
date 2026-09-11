@@ -11,10 +11,10 @@ export function AffecioCard({ children, className, padding = "lg" }: AffecioCard
   return (
     <div
       className={cn(
-        "rounded-lg border border-affecio-border bg-affecio-surface",
+        "rounded-xl border border-affecio-border bg-affecio-surface shadow-panel",
         padding === "none" && "p-0",
         padding === "md" && "p-4",
-        padding === "lg" && "p-5",
+        padding === "lg" && "p-6",
         className,
       )}
     >

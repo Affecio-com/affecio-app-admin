@@ -6,7 +6,9 @@ const detailTitles: Record<string, string> = {
   "service-health": "Service health",
   profile: "Profile",
   security: "Security",
-  notifications: "Notifications",
+  playbook: "Support playbook",
+  escalations: "Escalations",
+  "push-notifications": "Push notifications",
 };
 
 export function getPageTitleFromPath(pathname: string): string {
@@ -23,6 +25,7 @@ export function getPageTitleFromPath(pathname: string): string {
     if (segments[0] === "users") return "User detail";
     if (segments[0] === "reports") return "Report detail";
     if (segments[0] === "verifications") return "Verification review";
+    if (segments[0] === "support") return "Ticket";
     return navMatch.label;
   }
 

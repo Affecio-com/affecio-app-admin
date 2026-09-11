@@ -12,11 +12,13 @@ export interface AdminUser {
   name: string;
   role: AdminRole;
   mfaEnabled: boolean;
-  lastLoginAt?: string;
+  lastLoginAt?: string | null;
+  lastActivityAt?: string | null;
   createdAt: string;
 }
 
 export interface AdminSession {
   admin: AdminUser;
   accessToken: string;
+  refreshToken?: string;
 }

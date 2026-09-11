@@ -102,7 +102,7 @@ export function MfaSettingsPanel() {
       title="Two-factor authentication"
       description="Require a verification code from your authenticator app when signing in."
     >
-      {message ? <p className="mb-4 text-sm text-emerald-400">{message}</p> : null}
+      {message ? <p className="mb-4 text-sm text-emerald-700 dark:text-emerald-400">{message}</p> : null}
       {error ? (
         <div className="mb-4">
           <ApiErrorMessage message={error} />

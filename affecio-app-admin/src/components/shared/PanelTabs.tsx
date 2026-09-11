@@ -11,7 +11,7 @@ interface PanelTabsProps {
 
 export function PanelTabs({ tabs, activeTab = tabs[0], onTabChange, className }: PanelTabsProps) {
   return (
-    <div className={cn("flex gap-1 border-b border-affecio-border px-4 pt-3", className)}>
+    <div className={cn("flex gap-1 border-b border-affecio-border px-5 pt-2", className)}>
       {tabs.map((tab) => {
         const isActive = tab === activeTab;
         return (

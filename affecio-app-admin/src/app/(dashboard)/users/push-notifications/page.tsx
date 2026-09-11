@@ -122,7 +122,7 @@ function PushNotificationsContent() {
       />
 
       {successMessage ? (
-        <div className="mb-6 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-400">
+        <div className="mb-6 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-400">
           {successMessage}
         </div>
       ) : null}
@@ -154,7 +154,7 @@ function PushNotificationsContent() {
       ) : null}
 
       <AffecioCard className="mb-6">
-        <h2 className="font-mondwest text-lg font-semibold text-affecio-text">How it works</h2>
+        <h2 className="text-lg font-semibold tracking-tight text-affecio-text">How it works</h2>
         <ul className="mt-3 list-inside list-disc space-y-1 text-sm text-affecio-muted">
           <li>Compose a title and message, then choose your audience segment.</li>
           <li>Notifications are delivered via Firebase Cloud Messaging when device tokens are registered.</li>
@@ -247,7 +247,7 @@ function PushNotificationsContent() {
                 {AUDIENCE_OPTIONS.map((opt) => (
                   <label
                     key={opt.value}
-                    className="flex cursor-pointer items-start gap-3 rounded-lg border border-affecio-border p-3 transition-colors hover:bg-white/5"
+                    className="flex cursor-pointer items-start gap-3 rounded-lg border border-affecio-border p-3 transition-colors hover:bg-affecio-input"
                   >
                     <input
                       type="radio"

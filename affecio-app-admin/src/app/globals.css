@@ -2,22 +2,29 @@
 @config "../../tailwind.config.cjs";
 
 :root {
-  /* Affecio mobile tokens → admin web */
-  --affecio-bg: #000000;
-  --affecio-surface: #111111;
-  --affecio-input: #1a1a1a;
-  --affecio-border: #2a2a2a;
-  --affecio-text: #ffffff;
-  --affecio-muted: #aaaaaa;
-  --affecio-accent: #ff4b63;
-  --affecio-danger: #ff3b30;
-  --affecio-link: #4fc3f7;
-  --affecio-divider: rgba(255, 255, 255, 0.12);
-  --affecio-panel: #0d0d0d;
-  --affecio-sidebar: #000000;
-  --affecio-topbar: #000000;
+  --affecio-bg: #f7f7f5;
+  --affecio-surface: #ffffff;
+  --affecio-input: #f3f3f0;
+  --affecio-border: #e6e6e1;
+  --affecio-text: #111111;
+  --affecio-muted: #6b6b66;
+  --affecio-accent: #111111;
+  --affecio-danger: #dc2626;
+  --affecio-link: #111111;
+  --affecio-divider: rgba(17, 17, 17, 0.08);
+  --affecio-panel: #ffffff;
+  --affecio-sidebar: #ffffff;
+  --affecio-topbar: rgba(247, 247, 245, 0.86);
+  --affecio-hover: rgba(17, 17, 17, 0.04);
+  --affecio-shadow: 0 1px 2px rgba(17, 17, 17, 0.04), 0 8px 24px rgba(17, 17, 17, 0.04);
+  --chart-grid: #e6e6e1;
+  --chart-tick: #6b6b66;
+  --chart-1: #111111;
+  --chart-2: #6b6b66;
+  --chart-3: #a3a39c;
+  --chart-4: #d4d4ce;
+  --chart-5: #ecece8;
 
-  /* shadcn-compatible aliases */
   --background: var(--affecio-bg);
   --foreground: var(--affecio-text);
   --surface: var(--affecio-surface);
@@ -25,11 +32,51 @@
   --muted: var(--affecio-input);
   --muted-foreground: var(--affecio-muted);
   --border: var(--affecio-border);
-  --ring: var(--affecio-accent);
+  --ring: var(--affecio-text);
   --primary: var(--affecio-text);
-  --primary-foreground: #000000;
+  --primary-foreground: var(--affecio-bg);
   --destructive: var(--affecio-danger);
-  --destructive-foreground: var(--affecio-text);
+  --destructive-foreground: #ffffff;
+  --accent: var(--affecio-accent);
+  --link: var(--affecio-link);
+}
+
+.dark {
+  --affecio-bg: #0b0b0b;
+  --affecio-surface: #141414;
+  --affecio-input: #1c1c1c;
+  --affecio-border: #2a2a2a;
+  --affecio-text: #f5f5f3;
+  --affecio-muted: #9a9a94;
+  --affecio-accent: #f5f5f3;
+  --affecio-danger: #f87171;
+  --affecio-link: #f5f5f3;
+  --affecio-divider: rgba(255, 255, 255, 0.08);
+  --affecio-panel: #111111;
+  --affecio-sidebar: #0b0b0b;
+  --affecio-topbar: rgba(11, 11, 11, 0.86);
+  --affecio-hover: rgba(255, 255, 255, 0.05);
+  --affecio-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 12px 32px rgba(0, 0, 0, 0.28);
+  --chart-grid: #2a2a2a;
+  --chart-tick: #9a9a94;
+  --chart-1: #f5f5f3;
+  --chart-2: #9a9a94;
+  --chart-3: #6b6b66;
+  --chart-4: #3f3f3a;
+  --chart-5: #262626;
+
+  --background: var(--affecio-bg);
+  --foreground: var(--affecio-text);
+  --surface: var(--affecio-surface);
+  --input-bg: var(--affecio-input);
+  --muted: var(--affecio-input);
+  --muted-foreground: var(--affecio-muted);
+  --border: var(--affecio-border);
+  --ring: var(--affecio-text);
+  --primary: var(--affecio-text);
+  --primary-foreground: var(--affecio-bg);
+  --destructive: var(--affecio-danger);
+  --destructive-foreground: #0b0b0b;
   --accent: var(--affecio-accent);
   --link: var(--affecio-link);
 }
@@ -59,27 +106,39 @@
   --color-affecio-danger: var(--affecio-danger);
   --color-affecio-link: var(--affecio-link);
   --color-affecio-panel: var(--affecio-panel);
-  --font-sans: var(--font-poppins);
-  --font-display: var(--font-mondwest);
-  --font-mono: var(--font-neuebit);
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-inter);
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 * {
   border-color: var(--border);
 }
 
+html {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-poppins), system-ui, sans-serif;
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.011em;
 }
 
-.font-display {
-  font-family: var(--font-mondwest), var(--font-poppins), system-ui, sans-serif;
-}
-
+.font-display,
 .font-mondwest {
-  font-family: var(--font-mondwest), var(--font-poppins), system-ui, sans-serif;
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.03em;
+}
+
+.font-brand {
+  font-family: var(--font-mondwest), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0;
 }
 
 .affecio-divider {
@@ -87,9 +146,20 @@ body {
 }
 
 a.affecio-link {
-  color: var(--affecio-link);
+  color: var(--affecio-text);
+  text-underline-offset: 3px;
 }
 
 a.affecio-link:hover {
   text-decoration: underline;
+}
+
+::selection {
+  background: var(--affecio-text);
+  color: var(--affecio-bg);
+}
+
+:focus-visible {
+  outline: 2px solid var(--affecio-text);
+  outline-offset: 2px;
 }

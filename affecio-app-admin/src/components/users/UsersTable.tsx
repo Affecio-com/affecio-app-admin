@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { DataTable } from "@/components/shared/DataTable";
+import { AppUserCell } from "@/components/users/AppUserCell";
 import type { AppUser } from "@/types/user";
 import { formatDate } from "@/lib/format";
 
@@ -17,11 +17,7 @@ export function UsersTable({ users }: UsersTableProps) {
         {
           key: "name",
           header: "Name",
-          cell: (user) => (
-            <Link href={`/users/${user.id}`} className="font-medium hover:underline">
-              {user.name}
-            </Link>
-          ),
+          cell: (user) => <AppUserCell user={user} subtitle />,
         },
         {
           key: "contact",

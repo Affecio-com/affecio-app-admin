@@ -5,6 +5,7 @@ export interface ServiceComponent {
   name: string;
   status: ServiceStatus;
   description?: string;
+  updatedAt?: string;
 }
 
 export interface ServiceGroup {
@@ -14,6 +15,15 @@ export interface ServiceGroup {
   components: ServiceComponent[];
 }
 
+export interface ServiceHealthEvent {
+  id: string;
+  componentId: string;
+  status: ServiceStatus;
+  message: string;
+  createdAt: string;
+  createdBy: string;
+}
+
 export interface ServiceHealthSnapshot {
   overallStatus: ServiceStatus;
   headline: string;
@@ -21,6 +31,7 @@ export interface ServiceHealthSnapshot {
   lastUpdated: string;
   periodLabel: string;
   groups: ServiceGroup[];
+  events?: ServiceHealthEvent[];
 }
 
 export interface AdminApiHealth {

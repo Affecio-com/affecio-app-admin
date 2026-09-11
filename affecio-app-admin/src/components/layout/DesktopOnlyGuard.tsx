@@ -25,7 +25,7 @@ export function DesktopOnlyGuard({ children }: { children: ReactNode }) {
   if (!isDesktop) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-affecio-bg px-8 text-center">
-        <p className="font-mondwest text-2xl font-semibold text-affecio-text">Affecio Admin</p>
+        <p className="text-2xl font-semibold tracking-tight text-affecio-text">Affecio Admin</p>
         <p className="mt-4 max-w-sm text-affecio-muted">
           Affecio Admin is available on desktop only. Please use a screen at least 1024px wide.
         </p>

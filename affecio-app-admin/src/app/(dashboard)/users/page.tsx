@@ -1,9 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { DataListPage } from "@/components/layout/DataListPage";
+import { RoleGate } from "@/components/layout/RoleGate";
 import { CreateUserDialog } from "@/components/users/CreateUserDialog";
+import { AppUserCell } from "@/components/users/AppUserCell";
 import { AffecioButton } from "@/components/affecio/AffecioButton";
 import {
   StatusPill,
@@ -14,11 +15,18 @@ import {
 import { getUsers } from "@/services/users";
 import { formatDate } from "@/lib/format";
 import { useAuth } from "@/providers/AuthProvider";
+import { hasRole, profileEditRoles, userLookupRoles } from "@/config/access";
 
 function tabToFilter(tab: string): { accountStatus?: string; hasOpenReports?: boolean } {
   switch (tab) {
     case "Active":
       return { accountStatus: "active" };
+    case "Warned":
+      return { accountStatus: "warned" };
+    case "Restricted":
+      return { accountStatus: "restricted" };
+    case "Shadowbanned":
+      return { accountStatus: "shadowbanned" };
     case "Suspended":
       return { accountStatus: "suspended" };
     case "Banned":
@@ -33,20 +41,29 @@ function tabToFilter(tab: string): { accountStatus?: string; hasOpenReports?: bo
 export default function UsersPage() {
   const { admin } = useAuth();
   const [createOpen, setCreateOpen] = useState(false);
-  const canCreate = admin && ["super_admin", "admin", "moderator"].includes(admin.role);
+  const canCreate = hasRole(admin?.role, profileEditRoles);
 
   return (
-    <>
+    <RoleGate allowedRoles={userLookupRoles}>
       <DataListPage
-        title="Users"
-        description="Search, create, and manage registered app users."
+        title="Members"
+        description="Member lookup for Trust & Safety, support, and engineering. Search by name, email, phone, or ID."
         action={
           canCreate ? (
             <AffecioButton onClick={() => setCreateOpen(true)}>+ Create user</AffecioButton>
           ) : undefined
         }
         queryKey="users"
-        tabs={["All", "Active", "Suspended", "Banned", "Reported"]}
+        tabs={[
+          "All",
+          "Active",
+          "Warned",
+          "Restricted",
+          "Shadowbanned",
+          "Suspended",
+          "Banned",
+          "Reported",
+        ]}
         statusFromTab={(tab) => tab}
         fetcher={({ page, pageSize, search, status }) => {
           const filter = tabToFilter(status ?? "All");
@@ -64,12 +81,8 @@ export default function UsersPage() {
         columns={[
           {
             key: "name",
-            header: "Name",
-            cell: (user) => (
-              <Link href={`/users/${user.id}`} className="font-medium hover:underline">
-                {user.name}
-              </Link>
-            ),
+            header: "User",
+            cell: (user) => <AppUserCell user={user} subtitle />,
           },
           {
             key: "contact",
@@ -135,6 +148,6 @@ export default function UsersPage() {
         ]}
       />
       <CreateUserDialog open={createOpen} onOpenChange={setCreateOpen} />
-    </>
+    </RoleGate>
   );
 }

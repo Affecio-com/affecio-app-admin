@@ -80,7 +80,7 @@ export default function NotificationSettingsPage() {
 
       <div className="mt-6 flex items-center gap-3">
         <AffecioButton onClick={handleSave}>Save preferences</AffecioButton>
-        {saved ? <span className="text-sm text-emerald-400">Saved</span> : null}
+        {saved ? <span className="text-sm text-emerald-700 dark:text-emerald-400">Saved</span> : null}
       </div>
     </div>
   );

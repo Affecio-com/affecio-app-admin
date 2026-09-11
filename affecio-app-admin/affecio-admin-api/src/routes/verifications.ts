@@ -8,9 +8,12 @@ import { auditAction } from "../middleware/auditAction";
 
 const router = Router();
 
-router.use(requireAdminAuth, requireRole("super_admin", "admin", "moderator"));
+const readRoles = ["super_admin", "admin", "moderator", "support"] as const;
+const writeRoles = ["super_admin", "admin", "moderator"] as const;
 
-router.get("/", async (req, res) => {
+router.use(requireAdminAuth);
+
+router.get("/", requireRole(...readRoles), async (req, res) => {
   const page = z.coerce.number().default(1).parse(req.query.page);
   const pageSize = z.coerce.number().default(20).parse(req.query.pageSize);
   const status = z.enum(["pending", "approved", "rejected"]).optional().parse(req.query.status);
@@ -18,7 +21,7 @@ router.get("/", async (req, res) => {
   res.json(result);
 });
 
-router.get("/:id", async (req, res) => {
+router.get("/:id", requireRole(...readRoles), async (req, res) => {
   const item = await verificationService.getVerificationById(getRouteParam(req.params.id));
   if (!item) {
     res.status(404).json({ message: "Verification not found" });
@@ -29,6 +32,7 @@ router.get("/:id", async (req, res) => {
 
 router.post(
   "/:id/review",
+  requireRole(...writeRoles),
   auditAction("verification.review", "verification", (req) => getRouteParam(req.params.id)),
   async (req, res) => {
     const status = z.enum(["approved", "rejected"]).parse(req.body.status);

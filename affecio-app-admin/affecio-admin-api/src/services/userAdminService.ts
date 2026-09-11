@@ -1,12 +1,15 @@
 import { randomUUID } from "crypto";
+import type { UserAdminActionType } from "@prisma/client";
 import type {
   AccountStatus,
   ActivityStatus,
   CreateUserInput,
+  EnforceAction,
   ListUsersInput,
   UpdateUserInput,
 } from "../schemas/users";
 import { prisma } from "../lib/prisma";
+import { getProfilePhotoMap, hydrateUsersByIds, withPhoto } from "../lib/profilePhotos";
 
 const userSummarySelect = {
   id: true,
@@ -20,12 +23,16 @@ function toIso(value: Date | string | null | undefined): string | null {
   return value instanceof Date ? value.toISOString() : value;
 }
 
-function mapUserRef(user: { id: string; name: string; email: string | null; phoneNumber?: string }) {
+function mapUserRef(
+  user: { id: string; name: string; email: string | null; phoneNumber?: string },
+  profilePhotoUrl: string | null = null,
+) {
   return {
     id: user.id,
     name: user.name,
     email: user.email,
     phoneNumber: user.phoneNumber ?? null,
+    profilePhotoUrl,
   };
 }
 
@@ -101,7 +108,8 @@ async function enrichUserListItems(
 
   const userIds = users.map((u) => u.id);
 
-  const [metaRows, reportCounts, openReportCounts, verifications, mediaCounts] = await Promise.all([
+  const [metaRows, reportCounts, openReportCounts, verifications, mediaCounts, photoMap] =
+    await Promise.all([
     prisma.userAdminMeta.findMany({ where: { userId: { in: userIds } } }),
     prisma.report.groupBy({
       by: ["targetId"],
@@ -122,6 +130,7 @@ async function enrichUserListItems(
       where: { userId: { in: userIds } },
       _count: { _all: true },
     }),
+    getProfilePhotoMap(userIds),
   ]);
 
   const metaMap = new Map(metaRows.map((m) => [m.userId, m]));
@@ -166,6 +175,7 @@ async function enrichUserListItems(
         mediaCount,
       }),
       mediaCount,
+      profilePhotoUrl: photoMap.get(user.id) ?? null,
     };
   });
 }
@@ -288,11 +298,46 @@ export async function createUser(input: CreateUserInput) {
 }
 
 export async function deleteUser(id: string) {
+  await prisma.userAdminAction.deleteMany({ where: { userId: id } });
   await prisma.userAdminMeta.deleteMany({ where: { userId: id } });
   await prisma.pushDeviceToken.deleteMany({ where: { userId: id } });
   await prisma.user.delete({ where: { id } });
   return { deleted: true };
 }
+
+async function logAdminAction(input: {
+  userId: string;
+  adminId: string;
+  action: UserAdminActionType;
+  reason?: string | null;
+}) {
+  await prisma.userAdminAction.create({
+    data: {
+      userId: input.userId,
+      adminId: input.adminId,
+      action: input.action,
+      reason: input.reason ?? null,
+    },
+  });
+}
+
+const ENFORCE_STATUS: Record<EnforceAction, AccountStatus> = {
+  warn: "warned",
+  restrict: "restricted",
+  shadowban: "shadowbanned",
+  suspend: "suspended",
+  ban: "banned",
+  restore: "active",
+};
+
+const ENFORCE_REASON: Record<EnforceAction, string> = {
+  warn: "Formal warning issued",
+  restrict: "Discovery restricted",
+  shadowban: "Removed from discovery (shadowban)",
+  suspend: "Temporarily suspended",
+  ban: "Permanently banned",
+  restore: "Account restored to active",
+};
 
 async function upsertAdminMeta(
   userId: string,
@@ -373,7 +418,7 @@ export async function getUserById(id: string) {
 
   if (!user) return null;
 
-  const [adminMeta, reportsAsTarget, reportsFiled, verifications, pushTokens] = await Promise.all([
+  const [adminMeta, reportsAsTarget, reportsFiled, verifications, pushTokens, caseHistory] = await Promise.all([
     prisma.userAdminMeta.findUnique({ where: { userId: id } }),
     prisma.report.findMany({
       where: { targetId: id },
@@ -392,6 +437,12 @@ export async function getUserById(id: string) {
     prisma.pushDeviceToken.findMany({
       where: { userId: id },
       orderBy: { updatedAt: "desc" },
+    }),
+    prisma.userAdminAction.findMany({
+      where: { userId: id },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      include: { admin: { select: { id: true, name: true, role: true } } },
     }),
   ]);
 
@@ -453,6 +504,31 @@ export async function getUserById(id: string) {
   const confirmedMedia = user.UserMedia.filter((m) => m.status === "CONFIRMED").length;
   const pendingMedia = user.UserMedia.filter((m) => m.status === "PENDING").length;
 
+  const relatedIds = [
+    user.id,
+    ...Array.from(matchMap.values()).map((m) => m.otherUser.id),
+    ...user.Block_Block_blockerIdToUser.map((b) => b.User_Block_blockedIdToUser.id),
+    ...user.Block_Block_blockedIdToUser.map((b) => b.User_Block_blockerIdToUser.id),
+    ...user.Swipe_Swipe_fromUserIdToUser.map((s) => s.User_Swipe_toUserIdToUser.id),
+    ...user.Swipe_Swipe_toUserIdToUser.map((s) => s.User_Swipe_fromUserIdToUser.id),
+    ...Array.from(callMap.values()).map((c) => c.otherUser.id),
+    ...reportsAsTarget.map((r) => r.reporterId),
+    ...reportsFiled.map((r) => r.targetId),
+  ];
+  const [photoMap, reportPeople] = await Promise.all([
+    getProfilePhotoMap(relatedIds),
+    hydrateUsersByIds([
+      ...reportsAsTarget.map((r) => r.reporterId),
+      ...reportsFiled.map((r) => r.targetId),
+    ]),
+  ]);
+  const patchRef = <T extends { id: string }>(ref: T) => withPhoto(ref, photoMap);
+
+  const ownPhoto =
+    photoMap.get(user.id) ??
+    user.UserMedia.find((m) => m.kind === "PROFILE_PHOTO" && m.publicUrl)?.publicUrl ??
+    null;
+
   return {
     id: user.id,
     phoneNumber: user.phoneNumber,
@@ -469,6 +545,7 @@ export async function getUserById(id: string) {
     customAnswer: user.customAnswer,
     createdAt: user.createdAt.toISOString(),
     updatedAt: user.updatedAt.toISOString(),
+    profilePhotoUrl: ownPhoto,
     accountStatus,
     activityStatus: getActivityStatus(user.updatedAt),
     statusReason: adminMeta?.statusReason ?? null,
@@ -522,6 +599,7 @@ export async function getUserById(id: string) {
       status: r.status,
       reason: r.reason,
       reporterId: r.reporterId,
+      reporter: reportPeople.get(r.reporterId) ?? null,
       createdAt: r.createdAt.toISOString(),
     })),
     reportsFiled: reportsFiled.map((r) => ({
@@ -530,6 +608,7 @@ export async function getUserById(id: string) {
       status: r.status,
       reason: r.reason,
       targetId: r.targetId,
+      target: reportPeople.get(r.targetId) ?? null,
       createdAt: r.createdAt.toISOString(),
     })),
     verifications: verifications.map((v) => ({
@@ -550,46 +629,48 @@ export async function getUserById(id: string) {
       status: m.status,
       createdAt: m.createdAt.toISOString(),
     })),
-    matches: Array.from(matchMap.values()).sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-    ),
+    matches: Array.from(matchMap.values())
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .map((m) => ({ ...m, otherUser: patchRef(m.otherUser) })),
     blocksGiven: user.Block_Block_blockerIdToUser.map((b) => ({
       id: b.id,
       createdAt: b.createdAt.toISOString(),
-      blockedUser: mapUserRef(b.User_Block_blockedIdToUser),
+      blockedUser: patchRef(mapUserRef(b.User_Block_blockedIdToUser)),
     })),
     blocksReceived: user.Block_Block_blockedIdToUser.map((b) => ({
       id: b.id,
       createdAt: b.createdAt.toISOString(),
-      blocker: mapUserRef(b.User_Block_blockerIdToUser),
+      blocker: patchRef(mapUserRef(b.User_Block_blockerIdToUser)),
     })),
     swipesSent: user.Swipe_Swipe_fromUserIdToUser.map((s) => ({
       id: s.id,
       action: s.action,
       createdAt: s.createdAt.toISOString(),
       updatedAt: s.updatedAt.toISOString(),
-      targetUser: mapUserRef(s.User_Swipe_toUserIdToUser),
+      targetUser: patchRef(mapUserRef(s.User_Swipe_toUserIdToUser)),
     })),
     swipesReceived: user.Swipe_Swipe_toUserIdToUser.map((s) => ({
       id: s.id,
       action: s.action,
       createdAt: s.createdAt.toISOString(),
       updatedAt: s.updatedAt.toISOString(),
-      fromUser: mapUserRef(s.User_Swipe_fromUserIdToUser),
+      fromUser: patchRef(mapUserRef(s.User_Swipe_fromUserIdToUser)),
     })),
-    calls: Array.from(callMap.values()).sort(
-      (a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
-    ),
+    calls: Array.from(callMap.values())
+      .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime())
+      .map((c) => ({ ...c, otherUser: patchRef(c.otherUser) })),
+    caseHistory: caseHistory.map((item) => ({
+      id: item.id,
+      action: item.action,
+      reason: item.reason,
+      createdAt: item.createdAt.toISOString(),
+      admin: item.admin,
+    })),
   };
 }
 
 export async function updateUser(id: string, input: UpdateUserInput, adminId?: string) {
-  const {
-    accountStatus,
-    statusReason,
-    adminNotes,
-    ...profileFields
-  } = input;
+  const { adminNotes, ...profileFields } = input;
 
   const hasProfileUpdate = Object.keys(profileFields).length > 0;
 
@@ -601,16 +682,71 @@ export async function updateUser(id: string, input: UpdateUserInput, adminId?: s
         updatedAt: new Date(),
       },
     });
+    if (adminId) {
+      await logAdminAction({
+        userId: id,
+        adminId,
+        action: "edit_profile",
+        reason: "Profile fields updated",
+      });
+    }
   }
 
-  if (accountStatus !== undefined || statusReason !== undefined || adminNotes !== undefined) {
+  if (adminNotes !== undefined) {
     await upsertAdminMeta(id, {
-      status: accountStatus,
-      statusReason,
       adminNotes,
       statusChangedBy: adminId,
     });
   }
 
   return getUserById(id);
+}
+
+export async function enforceUser(id: string, action: EnforceAction, reason: string, adminId: string) {
+  const existing = await prisma.user.findUnique({ where: { id }, select: { id: true } });
+  if (!existing) return null;
+
+  const status = ENFORCE_STATUS[action];
+  await upsertAdminMeta(id, {
+    status,
+    statusReason: reason || ENFORCE_REASON[action],
+    statusChangedBy: adminId,
+  });
+  await logAdminAction({
+    userId: id,
+    adminId,
+    action,
+    reason: reason || ENFORCE_REASON[action],
+  });
+  return getUserById(id);
+}
+
+export async function addUserNote(id: string, body: string, adminId: string) {
+  const existing = await prisma.user.findUnique({ where: { id }, select: { id: true } });
+  if (!existing) return null;
+
+  const meta = await prisma.userAdminMeta.findUnique({ where: { userId: id } });
+  const stamp = new Date().toISOString().slice(0, 16).replace("T", " ");
+  const nextNotes = meta?.adminNotes ? `${meta.adminNotes}\n[${stamp}] ${body}` : `[${stamp}] ${body}`;
+
+  await upsertAdminMeta(id, { adminNotes: nextNotes, statusChangedBy: adminId });
+  await logAdminAction({ userId: id, adminId, action: "note", reason: body });
+  return getUserById(id);
+}
+
+export async function setMediaHidden(userId: string, mediaId: string, hidden: boolean, adminId: string) {
+  const media = await prisma.userMedia.findFirst({ where: { id: mediaId, userId } });
+  if (!media) return null;
+
+  await prisma.userMedia.update({
+    where: { id: mediaId },
+    data: { status: hidden ? "HIDDEN" : "CONFIRMED" },
+  });
+  await logAdminAction({
+    userId,
+    adminId,
+    action: hidden ? "hide_media" : "unhide_media",
+    reason: hidden ? `Hid media ${media.kind}` : `Restored media ${media.kind}`,
+  });
+  return getUserById(userId);
 }

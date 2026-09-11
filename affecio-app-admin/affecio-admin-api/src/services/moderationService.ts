@@ -1,4 +1,5 @@
 import { prisma } from "../lib/prisma";
+import { hydrateUsersByIds } from "../lib/profilePhotos";
 
 export async function listModerationFlags(page: number, pageSize: number) {
   const [reports, total] = await Promise.all([
@@ -13,6 +14,8 @@ export async function listModerationFlags(page: number, pageSize: number) {
     }),
   ]);
 
+  const users = await hydrateUsersByIds(reports.flatMap((r) => [r.targetId, r.reporterId]));
+
   return {
     data: reports.map((r) => ({
       id: r.id,
@@ -21,6 +24,8 @@ export async function listModerationFlags(page: number, pageSize: number) {
       reason: r.reason,
       status: r.status === "open" ? "pending" : "actioned",
       createdAt: r.createdAt,
+      target: users.get(r.targetId) ?? null,
+      reporter: users.get(r.reporterId) ?? null,
     })),
     total,
     page,

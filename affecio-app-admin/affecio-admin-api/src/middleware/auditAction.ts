@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { prisma } from "../lib/prisma";
+import { clientIp, clientUserAgent } from "../lib/requestMeta";
 
 export function auditAction(action: string, targetType: string, getTargetId: (req: Request) => string) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -13,8 +14,12 @@ export function auditAction(action: string, targetType: string, getTargetId: (re
               adminId: req.admin.id,
               action,
               targetType,
-              targetId: getTargetId(req),
-              metadata: body as object,
+              targetId: String(getTargetId(req)).slice(0, 120),
+              metadata: {
+                ip: clientIp(req),
+                userAgent: clientUserAgent(req),
+                at: new Date().toISOString(),
+              },
             },
           })
           .catch(console.error);
@@ -24,4 +29,24 @@ export function auditAction(action: string, targetType: string, getTargetId: (re
 
     next();
   };
+}
+
+export async function writeAuthAudit(input: {
+  adminId: string;
+  action: string;
+  req: Request;
+}) {
+  await prisma.auditLog.create({
+    data: {
+      adminId: input.adminId,
+      action: input.action,
+      targetType: "admin",
+      targetId: input.adminId,
+      metadata: {
+        ip: clientIp(input.req),
+        userAgent: clientUserAgent(input.req),
+        at: new Date().toISOString(),
+      },
+    },
+  });
 }

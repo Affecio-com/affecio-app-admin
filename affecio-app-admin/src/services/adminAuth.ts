@@ -70,3 +70,7 @@ export async function disableMfa(password: string, code: string): Promise<AdminU
 export async function cancelMfaSetup(): Promise<void> {
   await apiClient.post("/admin/auth/mfa/cancel-setup");
 }
+
+export async function logout(): Promise<void> {
+  await apiClient.post("/admin/auth/logout");
+}

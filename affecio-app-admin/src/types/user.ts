@@ -1,4 +1,10 @@
-export type AccountStatus = "active" | "suspended" | "banned";
+export type AccountStatus =
+  | "active"
+  | "warned"
+  | "restricted"
+  | "shadowbanned"
+  | "suspended"
+  | "banned";
 export type ActivityStatus = "active" | "recent" | "inactive" | "dormant";
 export type VerificationStatus = "none" | "pending" | "approved" | "rejected";
 
@@ -7,6 +13,7 @@ export interface UserRef {
   name: string;
   email: string | null;
   phoneNumber: string | null;
+  profilePhotoUrl?: string | null;
 }
 
 export interface AppUser {
@@ -24,6 +31,7 @@ export interface AppUser {
   verificationStatus: VerificationStatus | string;
   profileCompleteness: number;
   mediaCount: number;
+  profilePhotoUrl?: string | null;
 }
 
 export interface UserMediaItem {
@@ -75,7 +83,9 @@ export interface UserReportItem {
   status: string;
   reason: string;
   reporterId?: string;
+  reporter?: UserRef | null;
   targetId?: string;
+  target?: UserRef | null;
   createdAt: string;
 }
 
@@ -85,6 +95,26 @@ export interface UserVerificationItem {
   mediaKey: string;
   submittedAt: string;
   reviewedAt: string | null;
+}
+
+export type UserAdminActionType =
+  | "note"
+  | "warn"
+  | "restrict"
+  | "shadowban"
+  | "suspend"
+  | "ban"
+  | "restore"
+  | "hide_media"
+  | "unhide_media"
+  | "edit_profile";
+
+export interface UserCaseHistoryItem {
+  id: string;
+  action: UserAdminActionType;
+  reason: string | null;
+  createdAt: string;
+  admin: { id: string; name: string; role: string };
 }
 
 export interface AppUserDetail {
@@ -103,6 +133,7 @@ export interface AppUserDetail {
   customAnswer: string | null;
   createdAt: string;
   updatedAt: string;
+  profilePhotoUrl?: string | null;
   accountStatus: AccountStatus;
   activityStatus: ActivityStatus;
   statusReason: string | null;
@@ -143,6 +174,7 @@ export interface AppUserDetail {
   swipesSent: UserSwipeItem[];
   swipesReceived: UserSwipeItem[];
   calls: UserCallItem[];
+  caseHistory?: UserCaseHistoryItem[];
 }
 
 export interface CreateAppUserInput {
@@ -166,7 +198,7 @@ export interface UpdateAppUserInput {
   startConversation?: string | null;
   comfortableWith?: string | null;
   lookingFor?: string[];
-  accountStatus?: AccountStatus;
-  statusReason?: string | null;
   adminNotes?: string | null;
 }
+
+export type EnforceAction = "warn" | "restrict" | "shadowban" | "suspend" | "ban" | "restore";

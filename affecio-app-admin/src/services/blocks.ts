@@ -1,13 +1,14 @@
 import { adminV1Client } from "@/config/api";
 import type { PaginatedResponse } from "@/types/api";
+import type { UserRef } from "@/types/user";
 
 export interface BlockRecord {
   id: string;
   blockerId: string;
   blockedId: string;
   createdAt: string;
-  blocker?: { id: string; name: string; email: string | null };
-  blocked?: { id: string; name: string; email: string | null };
+  blocker?: UserRef;
+  blocked?: UserRef;
 }
 
 export async function getBlocks(params?: {

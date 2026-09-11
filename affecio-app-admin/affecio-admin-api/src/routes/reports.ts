@@ -8,9 +8,12 @@ import { auditAction } from "../middleware/auditAction";
 
 const router = Router();
 
-router.use(requireAdminAuth, requireRole("super_admin", "admin", "moderator"));
+const readRoles = ["super_admin", "admin", "moderator", "support"] as const;
+const writeRoles = ["super_admin", "admin", "moderator"] as const;
 
-router.get("/", async (req, res) => {
+router.use(requireAdminAuth);
+
+router.get("/", requireRole(...readRoles), async (req, res) => {
   const parsed = listReportsSchema.safeParse(req.query);
   if (!parsed.success) {
     res.status(400).json({ message: "Invalid query parameters" });
@@ -20,7 +23,7 @@ router.get("/", async (req, res) => {
   res.json(result);
 });
 
-router.get("/:id", async (req, res) => {
+router.get("/:id", requireRole(...readRoles), async (req, res) => {
   const report = await reportService.getReportById(getRouteParam(req.params.id));
   if (!report) {
     res.status(404).json({ message: "Report not found" });
@@ -31,6 +34,7 @@ router.get("/:id", async (req, res) => {
 
 router.patch(
   "/:id",
+  requireRole(...writeRoles),
   auditAction("report.update", "report", (req) => getRouteParam(req.params.id)),
   async (req, res) => {
     const parsed = updateReportSchema.safeParse(req.body);

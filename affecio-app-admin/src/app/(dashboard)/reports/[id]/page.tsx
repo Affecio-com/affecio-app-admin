@@ -10,10 +10,16 @@ import { TableSkeleton } from "@/components/shared/LoadingSkeleton";
 import { ApiErrorMessage } from "@/components/shared/ApiErrorMessage";
 import { formatDateTime } from "@/lib/format";
 import { getReport, updateReportStatus } from "@/services/reports";
+import { AppUserCell } from "@/components/users/AppUserCell";
+import { RoleGate } from "@/components/layout/RoleGate";
+import { useAuth } from "@/providers/AuthProvider";
+import { hasRole, trustReadRoles, trustWriteRoles } from "@/config/access";
 
 export default function ReportDetailPage({ params }: { params: { id: string } }) {
   const { id } = params;
   const queryClient = useQueryClient();
+  const { admin } = useAuth();
+  const canWrite = hasRole(admin?.role, trustWriteRoles);
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["report", id],
@@ -29,12 +35,13 @@ export default function ReportDetailPage({ params }: { params: { id: string } })
   });
 
   return (
+    <RoleGate allowedRoles={trustReadRoles}>
     <div>
       <PageHeader
         title="Report detail"
         description={data ? `${data.type} report · ${formatDateTime(data.createdAt)}` : `Report ${id}`}
         action={
-          data ? (
+          data && canWrite ? (
             <ReportActionBar
               onResolve={() => updateMutation.mutate("resolved")}
               onDismiss={() => updateMutation.mutate("dismissed")}
@@ -63,23 +70,33 @@ export default function ReportDetailPage({ params }: { params: { id: string } })
               <dd className="mt-1">{data.reason}</dd>
             </div>
             <div>
-              <dt className="text-affecio-muted">Reporter ID</dt>
-              <dd className="mt-1 font-mono text-xs">{data.reporterId}</dd>
+              <dt className="text-affecio-muted">Reporter</dt>
+              <dd className="mt-1">
+                <AppUserCell user={data.reporter} fallbackId={data.reporterId} subtitle />
+              </dd>
             </div>
             <div>
-              <dt className="text-affecio-muted">Target ID</dt>
-              <dd className="mt-1 font-mono text-xs">{data.targetId}</dd>
+              <dt className="text-affecio-muted">Reported user</dt>
+              <dd className="mt-1">
+                <AppUserCell user={data.target} fallbackId={data.targetId} subtitle />
+              </dd>
             </div>
             <div>
               <dt className="text-affecio-muted">Updated</dt>
               <dd className="mt-1">{formatDateTime(data.updatedAt)}</dd>
             </div>
           </dl>
-          <Link href="/reports" className="mt-6 inline-block text-sm text-affecio-muted hover:text-affecio-text">
+          <Link href="/reports" className="mt-6 mr-4 inline-block text-sm text-affecio-muted hover:text-affecio-text">
             ← Back to reports
           </Link>
+          {data.targetId ? (
+            <Link href={`/users/${data.targetId}`} className="mt-6 inline-block text-sm text-affecio-muted hover:text-affecio-text">
+              Open reported member →
+            </Link>
+          ) : null}
         </AffecioCard>
       ) : null}
     </div>
+    </RoleGate>
   );
 }

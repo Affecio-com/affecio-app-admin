@@ -21,7 +21,7 @@ export function TableRow({ className, ...props }: React.HTMLAttributes<HTMLTable
   return (
     <tr
       className={cn(
-        "border-b border-[rgba(255,255,255,0.12)] transition-colors hover:bg-affecio-input",
+        "border-b border-affecio-border transition-colors hover:bg-affecio-input/70",
         className,
       )}
       {...props}
@@ -33,7 +33,7 @@ export function TableHead({ className, ...props }: React.ThHTMLAttributes<HTMLTa
   return (
     <th
       className={cn(
-        "h-12 px-5 text-left align-middle text-xs font-semibold uppercase tracking-wide text-affecio-muted",
+        "h-11 px-5 text-left align-middle text-[11px] font-medium uppercase tracking-[0.12em] text-affecio-muted",
         className,
       )}
       {...props}
@@ -42,5 +42,5 @@ export function TableHead({ className, ...props }: React.ThHTMLAttributes<HTMLTa
 }
 
 export function TableCell({ className, ...props }: React.TdHTMLAttributes<HTMLTableCellElement>) {
-  return <td className={cn("px-5 py-4 align-middle text-sm text-affecio-text", className)} {...props} />;
+  return <td className={cn("px-5 py-3.5 align-middle text-sm text-affecio-text", className)} {...props} />;
 }

@@ -4,6 +4,7 @@ import type {
   AppUser,
   AppUserDetail,
   CreateAppUserInput,
+  EnforceAction,
   UpdateAppUserInput,
 } from "@/types/user";
 
@@ -36,4 +37,29 @@ export async function updateUser(id: string, input: UpdateAppUserInput): Promise
 
 export async function deleteUser(id: string): Promise<void> {
   await adminV1Client.delete(`/users/${id}`);
+}
+
+export async function enforceUser(
+  id: string,
+  input: { action: EnforceAction; reason: string },
+): Promise<AppUserDetail> {
+  const { data } = await adminV1Client.post<{ data: AppUserDetail }>(`/users/${id}/enforce`, input);
+  return data.data;
+}
+
+export async function addUserNote(id: string, body: string): Promise<AppUserDetail> {
+  const { data } = await adminV1Client.post<{ data: AppUserDetail }>(`/users/${id}/notes`, { body });
+  return data.data;
+}
+
+export async function setUserMediaHidden(
+  userId: string,
+  mediaId: string,
+  hidden: boolean,
+): Promise<AppUserDetail> {
+  const { data } = await adminV1Client.patch<{ data: AppUserDetail }>(
+    `/users/${userId}/media/${mediaId}`,
+    { hidden },
+  );
+  return data.data;
 }

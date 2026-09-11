@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-import { Poppins } from "next/font/google";
+import { Inter } from "next/font/google";
 import { AuthProvider } from "@/providers/AuthProvider";
 import { QueryProvider } from "@/providers/QueryProvider";
+import { ThemeProvider } from "@/providers/ThemeProvider";
 import { DesktopOnlyGuard } from "@/components/layout/DesktopOnlyGuard";
 import "./globals.css";
 
-const poppins = Poppins({
+const inter = Inter({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-poppins",
+  variable: "--font-inter",
   display: "swap",
 });
 
@@ -19,29 +19,27 @@ const mondwest = localFont({
   display: "swap",
 });
 
-const neuebit = localFont({
-  src: "../../public/fonts/ppneuebit-bold.otf",
-  variable: "--font-neuebit",
-  display: "swap",
-});
-
 export const metadata: Metadata = {
   title: "Affecio Admin",
-  description: "Affecio admin dashboard — desktop only",
+  description: "Internal operations console for the Affecio mobile application.",
 };
+
+const themeInitScript = `(function(){try{var t=localStorage.getItem("affecio-theme");var d=t==="dark"||(t!=="light"&&window.matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",d);}catch(e){}})();`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html
-      lang="en"
-      className={`${poppins.variable} ${mondwest.variable} ${neuebit.variable} h-full dark`}
-    >
-      <body className="min-h-full bg-affecio-bg font-poppins text-affecio-text antialiased">
-        <QueryProvider>
-          <AuthProvider>
-            <DesktopOnlyGuard>{children}</DesktopOnlyGuard>
-          </AuthProvider>
-        </QueryProvider>
+    <html lang="en" className={`${inter.variable} ${mondwest.variable} h-full`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
+      <body className="min-h-full bg-affecio-bg font-sans text-affecio-text antialiased">
+        <ThemeProvider>
+          <QueryProvider>
+            <AuthProvider>
+              <DesktopOnlyGuard>{children}</DesktopOnlyGuard>
+            </AuthProvider>
+          </QueryProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

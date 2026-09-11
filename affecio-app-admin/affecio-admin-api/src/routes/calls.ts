@@ -3,10 +3,11 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { requireAdminAuth } from "../middleware/requireAdminAuth";
 import { requireRole } from "../middleware/requireRole";
+import { getProfilePhotoMap, withPhoto } from "../lib/profilePhotos";
 
 const router = Router();
 
-router.use(requireAdminAuth, requireRole("super_admin", "admin", "moderator"));
+router.use(requireAdminAuth, requireRole("super_admin", "admin", "moderator", "support"));
 
 router.get("/", async (req, res) => {
   const page = z.coerce.number().default(1).parse(req.query.page);
@@ -18,12 +19,14 @@ router.get("/", async (req, res) => {
       take: pageSize,
       orderBy: { startedAt: "desc" },
       include: {
-        User_CallSession_userAIdToUser: { select: { id: true, name: true, email: true } },
-        User_CallSession_userBIdToUser: { select: { id: true, name: true, email: true } },
+        User_CallSession_userAIdToUser: { select: { id: true, name: true, email: true, phoneNumber: true } },
+        User_CallSession_userBIdToUser: { select: { id: true, name: true, email: true, phoneNumber: true } },
       },
     }),
     prisma.callSession.count(),
   ]);
+
+  const photos = await getProfilePhotoMap(rows.flatMap((r) => [r.userAId, r.userBId]));
 
   res.json({
     data: rows.map((row) => ({
@@ -34,8 +37,8 @@ router.get("/", async (req, res) => {
       status: row.status,
       startedAt: row.startedAt,
       endedAt: row.endedAt,
-      userA: row.User_CallSession_userAIdToUser,
-      userB: row.User_CallSession_userBIdToUser,
+      userA: withPhoto(row.User_CallSession_userAIdToUser, photos),
+      userB: withPhoto(row.User_CallSession_userBIdToUser, photos),
     })),
     total,
     page,

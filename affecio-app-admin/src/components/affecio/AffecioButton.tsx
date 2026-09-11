@@ -20,13 +20,13 @@ export function AffecioButton({
     <Button
       variant={uiVariant}
       className={cn(
-        "rounded-full font-medium",
+        "rounded-lg font-medium",
         variant === "primary" &&
-          "bg-affecio-text text-black hover:bg-white/90 focus-visible:ring-affecio-accent",
+          "bg-affecio-text text-affecio-bg hover:opacity-90 focus-visible:ring-affecio-text",
         variant === "secondary" &&
-          "border border-affecio-text/30 bg-transparent text-affecio-text hover:bg-white/10",
+          "border border-affecio-border bg-affecio-surface text-affecio-text hover:bg-affecio-input",
         variant === "danger" &&
-          "bg-affecio-danger text-affecio-text hover:bg-affecio-danger/90",
+          "bg-affecio-danger text-white hover:opacity-90 dark:text-affecio-bg",
         className,
       )}
       {...props}

@@ -1,50 +1,40 @@
 "use client";
 
-import Link from "next/link";
 import { DataListPage } from "@/components/layout/DataListPage";
+import { RoleGate } from "@/components/layout/RoleGate";
+import { AppUserCell } from "@/components/users/AppUserCell";
 import { formatDateTime } from "@/lib/format";
 import { getMatches } from "@/services/matches";
+import { memberOpsRoles } from "@/config/access";
 
 export default function MatchesPage() {
   return (
-    <DataListPage
-      title="Matches"
-      description="Mutual matches between users on the platform."
-      queryKey="matches"
-      fetcher={({ page, pageSize }) => getMatches({ page, pageSize })}
-      emptyTitle="No matches"
-      emptyDescription="Match records will appear here."
-      columns={[
-        {
-          key: "userA",
-          header: "User A",
-          cell: (m) =>
-            m.userA ? (
-              <Link href={`/users/${m.userA.id}`} className="hover:underline">
-                {m.userA.name}
-              </Link>
-            ) : (
-              m.userAId
-            ),
-        },
-        {
-          key: "userB",
-          header: "User B",
-          cell: (m) =>
-            m.userB ? (
-              <Link href={`/users/${m.userB.id}`} className="hover:underline">
-                {m.userB.name}
-              </Link>
-            ) : (
-              m.userBId
-            ),
-        },
-        {
-          key: "created",
-          header: "Matched",
-          cell: (m) => formatDateTime(m.createdAt),
-        },
-      ]}
-    />
+    <RoleGate allowedRoles={memberOpsRoles}>
+      <DataListPage
+        title="Matches"
+        description="Mutual matches. Support uses this when a member says a match disappeared."
+        queryKey="matches"
+        fetcher={({ page, pageSize }) => getMatches({ page, pageSize })}
+        emptyTitle="No matches"
+        emptyDescription="Match records will appear here."
+        columns={[
+          {
+            key: "userA",
+            header: "User A",
+            cell: (m) => <AppUserCell user={m.userA} fallbackId={m.userAId} />,
+          },
+          {
+            key: "userB",
+            header: "User B",
+            cell: (m) => <AppUserCell user={m.userB} fallbackId={m.userBId} />,
+          },
+          {
+            key: "created",
+            header: "Matched",
+            cell: (m) => formatDateTime(m.createdAt),
+          },
+        ]}
+      />
+    </RoleGate>
   );
 }

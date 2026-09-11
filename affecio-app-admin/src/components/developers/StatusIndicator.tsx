@@ -9,31 +9,31 @@ const statusConfig: Record<
     label: "Operational",
     dot: "bg-emerald-500",
     ring: "ring-emerald-500/30",
-    text: "text-emerald-400",
+    text: "text-emerald-700 dark:text-emerald-400",
   },
   degraded: {
     label: "Degraded",
     dot: "bg-amber-500",
     ring: "ring-amber-500/30",
-    text: "text-amber-400",
+    text: "text-amber-700 dark:text-amber-400",
   },
   partial_outage: {
     label: "Partial outage",
     dot: "bg-orange-500",
     ring: "ring-orange-500/30",
-    text: "text-orange-400",
+    text: "text-orange-700 dark:text-orange-400",
   },
   major_outage: {
     label: "Major outage",
     dot: "bg-red-500",
     ring: "ring-red-500/30",
-    text: "text-red-400",
+    text: "text-red-700 dark:text-red-400",
   },
   maintenance: {
     label: "Maintenance",
     dot: "bg-sky-500",
     ring: "ring-sky-500/30",
-    text: "text-sky-400",
+    text: "text-sky-700 dark:text-sky-400",
   },
 };
 

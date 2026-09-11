@@ -45,7 +45,7 @@ export function TablePagination({
                 className={cn(
                   "flex h-8 w-8 items-center justify-center rounded-md text-sm transition-colors",
                   isActive
-                    ? "bg-affecio-text text-black"
+                    ? "bg-affecio-text text-affecio-bg"
                     : "text-affecio-muted hover:bg-affecio-input hover:text-affecio-text",
                 )}
               >

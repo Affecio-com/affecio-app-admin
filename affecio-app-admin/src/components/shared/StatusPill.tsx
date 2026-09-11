@@ -1,11 +1,11 @@
 import { cn } from "@/lib/utils";
 
 const toneStyles = {
-  default: "bg-white/8 text-affecio-text",
-  success: "bg-emerald-500/10 text-emerald-400",
-  warning: "bg-amber-500/10 text-amber-400",
-  danger: "bg-red-500/10 text-red-400",
-  muted: "bg-white/5 text-affecio-muted",
+  default: "border-affecio-border bg-affecio-input text-affecio-text",
+  success: "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+  warning: "border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+  danger: "border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-400",
+  muted: "border-affecio-border bg-affecio-input text-affecio-muted",
 } as const;
 
 interface StatusPillProps {
@@ -18,7 +18,7 @@ export function StatusPill({ label, tone = "default", className }: StatusPillPro
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium capitalize",
+        "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium capitalize",
         toneStyles[tone],
         className,
       )}
@@ -58,6 +58,10 @@ export function accountStatusTone(status: string): keyof typeof toneStyles {
   switch (status) {
     case "active":
       return "success";
+    case "warned":
+      return "warning";
+    case "restricted":
+    case "shadowbanned":
     case "suspended":
       return "warning";
     case "banned":

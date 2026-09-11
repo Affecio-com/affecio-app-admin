@@ -11,7 +11,7 @@ export function ServiceHealthBanner({ snapshot }: ServiceHealthBannerProps) {
       <div className="flex justify-center">
         <StatusIndicator status={snapshot.overallStatus} size="lg" />
       </div>
-      <h2 className="mt-4 font-mondwest text-2xl font-semibold text-affecio-text">{snapshot.headline}</h2>
+      <h2 className="mt-4 text-2xl font-semibold tracking-tight text-affecio-text">{snapshot.headline}</h2>
       <p className="mx-auto mt-2 max-w-lg text-sm text-affecio-muted">{snapshot.subheadline}</p>
     </div>
   );

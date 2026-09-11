@@ -1,5 +1,6 @@
 import { adminV1Client } from "@/config/api";
 import type { PaginatedResponse } from "@/types/api";
+import type { UserRef } from "@/types/user";
 
 export interface ModerationFlag {
   id: string;
@@ -8,6 +9,8 @@ export interface ModerationFlag {
   reason: string;
   status: "pending" | "actioned" | "dismissed";
   createdAt: string;
+  target?: UserRef | null;
+  reporter?: UserRef | null;
 }
 
 export async function getModerationFlags(params?: {

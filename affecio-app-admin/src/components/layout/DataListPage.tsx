@@ -29,6 +29,7 @@ interface DataListPageProps<T extends { id: string }> {
   tabs?: string[];
   statusFromTab?: (tab: string) => string | undefined;
   pageSize?: number;
+  banner?: ReactNode;
 }
 
 export function DataListPage<T extends { id: string }>({
@@ -44,6 +45,7 @@ export function DataListPage<T extends { id: string }>({
   tabs,
   statusFromTab,
   pageSize = 20,
+  banner,
 }: DataListPageProps<T>) {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -62,6 +64,7 @@ export function DataListPage<T extends { id: string }>({
   return (
     <div>
       <PageHeader title={title} description={description} action={action} />
+      {banner}
       <ContentPanel
         tabs={tabs}
         activeTab={activeTab}

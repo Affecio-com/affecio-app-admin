@@ -15,13 +15,23 @@ import {
 import { Input } from "@/components/ui/input";
 import { ApiErrorMessage } from "@/components/shared/ApiErrorMessage";
 import { getApiErrorMessage } from "@/lib/api-error";
-import { deleteUser, updateUser } from "@/services/users";
-import type { AppUserDetail, AccountStatus } from "@/types/user";
+import { addUserNote, deleteUser, enforceUser, updateUser } from "@/services/users";
+import type { AppUserDetail, EnforceAction } from "@/types/user";
 import { useAuth } from "@/providers/AuthProvider";
+import { caseNoteRoles, enforceRoles, hasRole, profileEditRoles, userDeleteRoles } from "@/config/access";
 
 interface UserAdminActionsProps {
   user: AppUserDetail;
 }
+
+const ENFORCE_OPTIONS: { action: EnforceAction; label: string; danger?: boolean }[] = [
+  { action: "warn", label: "Warn" },
+  { action: "restrict", label: "Restrict discovery" },
+  { action: "shadowban", label: "Shadowban" },
+  { action: "suspend", label: "Suspend" },
+  { action: "ban", label: "Ban", danger: true },
+  { action: "restore", label: "Restore" },
+];
 
 export function UserAdminActions({ user }: UserAdminActionsProps) {
   const { admin } = useAuth();
@@ -29,6 +39,10 @@ export function UserAdminActions({ user }: UserAdminActionsProps) {
   const queryClient = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [enforceAction, setEnforceAction] = useState<EnforceAction | null>(null);
+  const [reason, setReason] = useState("");
+  const [note, setNote] = useState("");
   const [formError, setFormError] = useState("");
   const [form, setForm] = useState({
     name: user.name,
@@ -36,40 +50,40 @@ export function UserAdminActions({ user }: UserAdminActionsProps) {
     phoneNumber: user.phoneNumber,
     gender: user.gender,
     aboutMe: user.aboutMe ?? "",
-    adminNotes: user.adminNotes ?? "",
-    statusReason: user.statusReason ?? "",
-    accountStatus: user.accountStatus as AccountStatus,
   });
 
-  const canWrite = admin && ["super_admin", "admin", "moderator"].includes(admin.role);
-  const canDelete = admin && ["super_admin", "admin"].includes(admin.role);
+  const canEdit = hasRole(admin?.role, profileEditRoles);
+  const canEnforce = hasRole(admin?.role, enforceRoles);
+  const canNote = hasRole(admin?.role, caseNoteRoles);
+  const canDelete = hasRole(admin?.role, userDeleteRoles);
+
+  function onUpdated(updated: AppUserDetail) {
+    void queryClient.setQueryData(["user", user.id], updated);
+    void queryClient.invalidateQueries({ queryKey: ["users"] });
+    setFormError("");
+    setEditOpen(false);
+    setNoteOpen(false);
+    setEnforceAction(null);
+    setReason("");
+    setNote("");
+  }
 
   const updateMutation = useMutation({
     mutationFn: (payload: Parameters<typeof updateUser>[1]) => updateUser(user.id, payload),
-    onSuccess: (updated) => {
-      void queryClient.setQueryData(["user", user.id], updated);
-      void queryClient.invalidateQueries({ queryKey: ["users"] });
-      setEditOpen(false);
-      setFormError("");
-    },
+    onSuccess: onUpdated,
     onError: (err) => setFormError(getApiErrorMessage(err, "Failed to update user.")),
   });
 
-  const statusMutation = useMutation({
-    mutationFn: (accountStatus: AccountStatus) =>
-      updateUser(user.id, {
-        accountStatus,
-        statusReason:
-          accountStatus === "active"
-            ? null
-            : accountStatus === "suspended"
-              ? "Suspended by admin"
-              : "Banned by admin",
-      }),
-    onSuccess: (updated) => {
-      void queryClient.setQueryData(["user", user.id], updated);
-      void queryClient.invalidateQueries({ queryKey: ["users"] });
-    },
+  const enforceMutation = useMutation({
+    mutationFn: () => enforceUser(user.id, { action: enforceAction!, reason: reason.trim() }),
+    onSuccess: onUpdated,
+    onError: (err) => setFormError(getApiErrorMessage(err, "Failed to apply action.")),
+  });
+
+  const noteMutation = useMutation({
+    mutationFn: () => addUserNote(user.id, note.trim()),
+    onSuccess: onUpdated,
+    onError: (err) => setFormError(getApiErrorMessage(err, "Failed to add note.")),
   });
 
   const deleteMutation = useMutation({
@@ -81,7 +95,7 @@ export function UserAdminActions({ user }: UserAdminActionsProps) {
     onError: (err) => setFormError(getApiErrorMessage(err, "Failed to delete user.")),
   });
 
-  if (!canWrite) return null;
+  if (!canEdit && !canEnforce && !canNote && !canDelete) return null;
 
   function handleEditSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -91,52 +105,39 @@ export function UserAdminActions({ user }: UserAdminActionsProps) {
       phoneNumber: form.phoneNumber.trim(),
       gender: form.gender.trim(),
       aboutMe: form.aboutMe.trim() || null,
-      adminNotes: form.adminNotes.trim() || null,
-      statusReason: form.statusReason.trim() || null,
-      accountStatus: form.accountStatus,
     });
   }
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2">
-        <AffecioButton variant="secondary" onClick={() => setEditOpen(true)}>
-          Edit profile
-        </AffecioButton>
-        {user.accountStatus !== "suspended" ? (
-          <AffecioButton
-            variant="secondary"
-            disabled={statusMutation.isPending}
-            onClick={() => statusMutation.mutate("suspended")}
-          >
-            Suspend
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {canNote ? (
+          <AffecioButton variant="secondary" onClick={() => setNoteOpen(true)}>
+            Add case note
           </AffecioButton>
-        ) : (
-          <AffecioButton
-            variant="secondary"
-            disabled={statusMutation.isPending}
-            onClick={() => statusMutation.mutate("active")}
-          >
-            Reactivate
+        ) : null}
+        {canEdit ? (
+          <AffecioButton variant="secondary" onClick={() => setEditOpen(true)}>
+            Edit profile
           </AffecioButton>
-        )}
-        {user.accountStatus !== "banned" ? (
-          <AffecioButton
-            variant="danger"
-            disabled={statusMutation.isPending}
-            onClick={() => statusMutation.mutate("banned")}
-          >
-            Ban
-          </AffecioButton>
-        ) : (
-          <AffecioButton
-            variant="secondary"
-            disabled={statusMutation.isPending}
-            onClick={() => statusMutation.mutate("active")}
-          >
-            Unban
-          </AffecioButton>
-        )}
+        ) : null}
+        {canEnforce
+          ? ENFORCE_OPTIONS.filter((option) =>
+              option.action === "restore" ? user.accountStatus !== "active" : true,
+            ).map((option) => (
+              <AffecioButton
+                key={option.action}
+                variant={option.danger ? "danger" : "secondary"}
+                onClick={() => {
+                  setEnforceAction(option.action);
+                  setReason("");
+                  setFormError("");
+                }}
+              >
+                {option.label}
+              </AffecioButton>
+            ))
+          : null}
         {canDelete ? (
           <AffecioButton variant="danger" onClick={() => setDeleteOpen(true)}>
             Delete
@@ -144,11 +145,68 @@ export function UserAdminActions({ user }: UserAdminActionsProps) {
         ) : null}
       </div>
 
+      <Dialog open={Boolean(enforceAction)} onOpenChange={(open) => !open && setEnforceAction(null)}>
+        <DialogContent className="border-affecio-border bg-affecio-surface sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="capitalize">{enforceAction?.replace(/_/g, " ")} account</DialogTitle>
+            <DialogDescription>
+              Trust & Safety action on {user.name}. This is logged on the case timeline and visible to
+              support.
+            </DialogDescription>
+          </DialogHeader>
+          <Input
+            placeholder="Policy reason (required)"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+          />
+          {formError ? <ApiErrorMessage message={formError} /> : null}
+          <DialogFooter>
+            <AffecioButton type="button" variant="secondary" onClick={() => setEnforceAction(null)}>
+              Cancel
+            </AffecioButton>
+            <AffecioButton
+              variant={enforceAction === "ban" ? "danger" : "primary"}
+              disabled={!reason.trim() || enforceMutation.isPending}
+              onClick={() => enforceMutation.mutate()}
+            >
+              {enforceMutation.isPending ? "Applying…" : "Confirm"}
+            </AffecioButton>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={noteOpen} onOpenChange={setNoteOpen}>
+        <DialogContent className="border-affecio-border bg-affecio-surface sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add case note</DialogTitle>
+            <DialogDescription>
+              Internal only. Use this for identity checks, what the member said, and what you already tried.
+            </DialogDescription>
+          </DialogHeader>
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            rows={4}
+            placeholder="Note"
+            className="w-full rounded-md border border-affecio-border bg-affecio-input px-3 py-2 text-sm"
+          />
+          {formError ? <ApiErrorMessage message={formError} /> : null}
+          <DialogFooter>
+            <AffecioButton type="button" variant="secondary" onClick={() => setNoteOpen(false)}>
+              Cancel
+            </AffecioButton>
+            <AffecioButton disabled={!note.trim() || noteMutation.isPending} onClick={() => noteMutation.mutate()}>
+              {noteMutation.isPending ? "Saving…" : "Save note"}
+            </AffecioButton>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="border-affecio-border bg-affecio-surface sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Edit user</DialogTitle>
-            <DialogDescription>Update profile fields and admin notes.</DialogDescription>
+            <DialogTitle>Edit profile</DialogTitle>
+            <DialogDescription>Correct member-facing profile fields. Enforcement stays on the case actions.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleEditSubmit} className="space-y-3">
             <Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Name" />
@@ -160,23 +218,6 @@ export function UserAdminActions({ user }: UserAdminActionsProps) {
               onChange={(e) => setForm((f) => ({ ...f, aboutMe: e.target.value }))}
               placeholder="About me"
               rows={2}
-              className="w-full rounded-md border border-affecio-border bg-affecio-input px-3 py-2 text-sm"
-            />
-            <select
-              value={form.accountStatus}
-              onChange={(e) => setForm((f) => ({ ...f, accountStatus: e.target.value as AccountStatus }))}
-              className="w-full rounded-md border border-affecio-border bg-affecio-input px-3 py-2 text-sm"
-            >
-              <option value="active">Active</option>
-              <option value="suspended">Suspended</option>
-              <option value="banned">Banned</option>
-            </select>
-            <Input value={form.statusReason} onChange={(e) => setForm((f) => ({ ...f, statusReason: e.target.value }))} placeholder="Status reason" />
-            <textarea
-              value={form.adminNotes}
-              onChange={(e) => setForm((f) => ({ ...f, adminNotes: e.target.value }))}
-              placeholder="Internal admin notes"
-              rows={3}
               className="w-full rounded-md border border-affecio-border bg-affecio-input px-3 py-2 text-sm"
             />
             {formError ? <ApiErrorMessage message={formError} /> : null}
@@ -197,8 +238,7 @@ export function UserAdminActions({ user }: UserAdminActionsProps) {
           <DialogHeader>
             <DialogTitle>Delete user permanently?</DialogTitle>
             <DialogDescription>
-              This removes {user.name} and all related data (matches, swipes, media, calls). This
-              cannot be undone.
+              This removes {user.name} and related data. Prefer Ban unless legal/ops requires erasure.
             </DialogDescription>
           </DialogHeader>
           {formError ? <ApiErrorMessage message={formError} /> : null}

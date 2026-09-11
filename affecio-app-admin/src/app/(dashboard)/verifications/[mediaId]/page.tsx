@@ -10,10 +10,16 @@ import { TableSkeleton } from "@/components/shared/LoadingSkeleton";
 import { ApiErrorMessage } from "@/components/shared/ApiErrorMessage";
 import { formatDateTime } from "@/lib/format";
 import { getVerification, reviewVerification } from "@/services/verifications";
+import { AppUserCell } from "@/components/users/AppUserCell";
+import { RoleGate } from "@/components/layout/RoleGate";
+import { useAuth } from "@/providers/AuthProvider";
+import { hasRole, trustReadRoles, trustWriteRoles } from "@/config/access";
 
 export default function VerificationReviewPage({ params }: { params: { mediaId: string } }) {
   const { mediaId } = params;
   const queryClient = useQueryClient();
+  const { admin } = useAuth();
+  const canReview = hasRole(admin?.role, trustWriteRoles);
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["verification", mediaId],
@@ -29,6 +35,7 @@ export default function VerificationReviewPage({ params }: { params: { mediaId: 
   });
 
   return (
+    <RoleGate allowedRoles={trustReadRoles}>
     <div>
       <PageHeader
         title="Verification review"
@@ -52,20 +59,22 @@ export default function VerificationReviewPage({ params }: { params: { mediaId: 
         <div className="grid gap-6 lg:grid-cols-2">
           <AffecioCard>
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="font-mondwest text-lg font-semibold">Details</h2>
+              <h2 className="text-lg font-semibold tracking-tight">Details</h2>
               <StatusPill label={data.status} />
             </div>
             <dl className="space-y-3 text-sm">
-              <div className="flex justify-between border-b border-affecio-border pb-3">
-                <dt className="text-affecio-muted">User ID</dt>
-                <dd className="font-mono text-xs">{data.userId}</dd>
+              <div className="flex items-center justify-between border-b border-affecio-border pb-3">
+                <dt className="text-affecio-muted">User</dt>
+                <dd>
+                  <AppUserCell user={data.user} fallbackId={data.userId} />
+                </dd>
               </div>
               <div className="flex justify-between border-b border-affecio-border pb-3">
                 <dt className="text-affecio-muted">Media key</dt>
                 <dd className="max-w-[200px] truncate font-mono text-xs">{data.mediaKey}</dd>
               </div>
             </dl>
-            {data.status === "pending" ? (
+            {data.status === "pending" && canReview ? (
               <div className="mt-6 flex gap-3">
                 <AffecioButton
                   disabled={reviewMutation.isPending}
@@ -85,7 +94,7 @@ export default function VerificationReviewPage({ params }: { params: { mediaId: 
           </AffecioCard>
 
           <AffecioCard>
-            <h2 className="font-mondwest text-lg font-semibold">Media preview</h2>
+            <h2 className="text-lg font-semibold tracking-tight">Media preview</h2>
             {data.mediaUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -102,5 +111,6 @@ export default function VerificationReviewPage({ params }: { params: { mediaId: 
         </div>
       ) : null}
     </div>
+    </RoleGate>
   );
 }

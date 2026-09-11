@@ -5,12 +5,16 @@ import Link from "next/link";
 import { use } from "react";
 import { AffecioCard } from "@/components/affecio/AffecioCard";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { UserAvatar } from "@/components/users/AppUserCell";
 import { UserDetailView } from "@/components/users/UserDetailView";
 import { UserAdminActions } from "@/components/users/UserAdminActions";
+import { UserSupportTickets } from "@/components/support/UserSupportTickets";
 import { TableSkeleton } from "@/components/shared/LoadingSkeleton";
 import { ApiErrorMessage } from "@/components/shared/ApiErrorMessage";
 import { formatDate } from "@/lib/format";
 import { getUser } from "@/services/users";
+import { RoleGate } from "@/components/layout/RoleGate";
+import { userLookupRoles } from "@/config/access";
 
 export default function UserDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -20,9 +24,19 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
   });
 
   return (
+    <RoleGate allowedRoles={userLookupRoles}>
     <div>
       <PageHeader
-        title={user?.name ?? "User detail"}
+        title={
+          user ? (
+            <span className="inline-flex items-center gap-3">
+              <UserAvatar user={user} size="lg" />
+              {user.name}
+            </span>
+          ) : (
+            "User detail"
+          )
+        }
         description={
           user
             ? `${user.email ?? user.phoneNumber} · Joined ${formatDate(user.createdAt)} · ID ${user.id}`
@@ -50,8 +64,12 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
           <ApiErrorMessage message={error instanceof Error ? error.message : "Failed to load user"} />
         </AffecioCard>
       ) : user ? (
-        <UserDetailView user={user} />
+        <div className="space-y-6">
+          <UserSupportTickets user={user} />
+          <UserDetailView user={user} />
+        </div>
       ) : null}
     </div>
+    </RoleGate>
   );
 }

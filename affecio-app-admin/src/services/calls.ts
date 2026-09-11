@@ -1,5 +1,6 @@
 import { adminV1Client } from "@/config/api";
 import type { PaginatedResponse } from "@/types/api";
+import type { UserRef } from "@/types/user";
 
 export interface CallRecord {
   id: string;
@@ -9,8 +10,8 @@ export interface CallRecord {
   status: string;
   startedAt: string;
   endedAt: string | null;
-  userA?: { id: string; name: string; email: string | null };
-  userB?: { id: string; name: string; email: string | null };
+  userA?: UserRef;
+  userB?: UserRef;
 }
 
 export async function getCalls(params?: {

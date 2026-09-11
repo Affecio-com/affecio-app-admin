@@ -8,6 +8,7 @@ import { AuthShell } from "@/components/auth/AuthShell";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/providers/AuthProvider";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -26,8 +27,13 @@ export default function LoginPage() {
       if (outcome === "success") {
         router.push("/");
       }
-    } catch {
-      setError("Invalid email or password.");
+    } catch (err) {
+      setError(
+        getApiErrorMessage(
+          err,
+          "Could not sign in. Check your email and password, and that the API is running on port 4001.",
+        ),
+      );
     } finally {
       setIsLoading(false);
     }
@@ -35,13 +41,13 @@ export default function LoginPage() {
 
   return (
     <AuthShell
-      title="Login to your account"
-      description="Access moderation tools, user management, verification queues, and platform analytics from one secure dashboard."
+      title="Sign in"
+      description="Use your Affecio admin credentials to access the internal operations console."
     >
       <form onSubmit={handleSubmit} className="space-y-5">
         <div className="space-y-2">
           <label htmlFor="email" className="text-sm font-medium text-affecio-text">
-            Email <span className="text-affecio-accent">*</span>
+            Email
           </label>
           <Input
             id="email"
@@ -57,7 +63,7 @@ export default function LoginPage() {
 
         <div className="space-y-2">
           <label htmlFor="password" className="text-sm font-medium text-affecio-text">
-            Password <span className="text-affecio-accent">*</span>
+            Password
           </label>
           <PasswordInput
             id="password"
@@ -72,7 +78,7 @@ export default function LoginPage() {
 
         {error ? <p className="text-sm text-affecio-danger">{error}</p> : null}
 
-        <AffecioButton type="submit" className="h-11 w-full rounded-xl" disabled={isLoading}>
+        <AffecioButton type="submit" className="h-11 w-full" disabled={isLoading}>
           {isLoading ? "Signing in..." : "Login"}
         </AffecioButton>
       </form>

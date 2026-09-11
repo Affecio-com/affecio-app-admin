@@ -10,11 +10,11 @@ import {
 } from "../schemas/auth";
 import { prisma } from "../lib/prisma";
 import { signAdminToken, signRefreshToken, verifyRefreshToken } from "../lib/jwt";
-import { hashPassword, verifyPassword } from "../lib/password";
+import { hashPassword, verifyPassword, verifyPasswordOrDummy } from "../lib/password";
 import { buildOtpAuthUrl, generateMfaSecret, verifyMfaCode } from "../lib/mfa";
 import { requireAdminAuth } from "../middleware/requireAdminAuth";
 import { rateLimit } from "../middleware/rateLimit";
-import { auditAction } from "../middleware/auditAction";
+import { auditAction, writeAuthAudit } from "../middleware/auditAction";
 
 const router = Router();
 
@@ -26,6 +26,7 @@ function adminPublicSelect() {
     role: true,
     mfaEnabled: true,
     lastLoginAt: true,
+    lastActivityAt: true,
     createdAt: true,
   } as const;
 }
@@ -37,9 +38,18 @@ function sessionResponse(admin: {
   role: AdminRole;
   mfaEnabled: boolean;
   createdAt: Date;
+  lastLoginAt?: Date | null;
+  lastActivityAt?: Date | null;
+  tokenVersion?: number;
 }) {
-  const accessToken = signAdminToken({ sub: admin.id, email: admin.email, role: admin.role });
-  const refreshToken = signRefreshToken(admin.id);
+  const tv = admin.tokenVersion ?? 0;
+  const accessToken = signAdminToken({
+    sub: admin.id,
+    email: admin.email,
+    role: admin.role,
+    tv,
+  });
+  const refreshToken = signRefreshToken(admin.id, tv);
   return {
     admin: {
       id: admin.id,
@@ -48,13 +58,18 @@ function sessionResponse(admin: {
       role: admin.role,
       mfaEnabled: admin.mfaEnabled,
       createdAt: admin.createdAt,
+      lastLoginAt: admin.lastLoginAt ?? null,
+      lastActivityAt: admin.lastActivityAt ?? null,
     },
     accessToken,
     refreshToken,
   };
 }
 
-router.post("/login", rateLimit(20, 60_000), async (req, res) => {
+const LOCK_AFTER = 5;
+const LOCK_MS = 15 * 60_000;
+
+router.post("/login", rateLimit(8, 60_000), async (req, res) => {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ message: "Invalid credentials" });
@@ -62,13 +77,22 @@ router.post("/login", rateLimit(20, 60_000), async (req, res) => {
   }
 
   const admin = await prisma.adminUser.findUnique({ where: { email: parsed.data.email } });
-  if (!admin) {
-    res.status(401).json({ message: "Invalid email or password" });
+  if (admin?.lockedUntil && admin.lockedUntil > new Date()) {
+    res.status(423).json({ message: "Account locked. Try again later." });
     return;
   }
 
-  const valid = await verifyPassword(parsed.data.password, admin.passwordHash);
-  if (!valid) {
+  const valid = await verifyPasswordOrDummy(parsed.data.password, admin?.passwordHash ?? null);
+  if (!admin || !valid) {
+    if (admin) {
+      const failedLoginCount = admin.failedLoginCount + 1;
+      const lockedUntil = failedLoginCount >= LOCK_AFTER ? new Date(Date.now() + LOCK_MS) : null;
+      await prisma.adminUser.update({
+        where: { id: admin.id },
+        data: { failedLoginCount, lockedUntil },
+      });
+      await writeAuthAudit({ adminId: admin.id, action: "auth.login.failed", req }).catch(() => undefined);
+    }
     res.status(401).json({ message: "Invalid email or password" });
     return;
   }
@@ -78,15 +102,21 @@ router.post("/login", rateLimit(20, 60_000), async (req, res) => {
     return;
   }
 
-  await prisma.adminUser.update({
+  const updated = await prisma.adminUser.update({
     where: { id: admin.id },
-    data: { lastLoginAt: new Date() },
+    data: {
+      lastLoginAt: new Date(),
+      lastActivityAt: new Date(),
+      failedLoginCount: 0,
+      lockedUntil: null,
+    },
   });
+  await writeAuthAudit({ adminId: admin.id, action: "auth.login.success", req }).catch(() => undefined);
 
-  res.json({ data: sessionResponse(admin) });
+  res.json({ data: sessionResponse({ ...admin, ...updated }) });
 });
 
-router.post("/refresh", async (req, res) => {
+router.post("/refresh", rateLimit(30, 60_000), async (req, res) => {
   const refreshToken = z.string().optional().parse(req.body.refreshToken);
   if (!refreshToken) {
     res.status(400).json({ message: "Refresh token required" });
@@ -96,12 +126,21 @@ router.post("/refresh", async (req, res) => {
   try {
     const payload = verifyRefreshToken(refreshToken);
     const admin = await prisma.adminUser.findUnique({ where: { id: payload.sub } });
-    if (!admin) {
+    if (!admin || admin.tokenVersion !== payload.tv) {
       res.status(401).json({ message: "Invalid refresh token" });
       return;
     }
+    if (admin.lockedUntil && admin.lockedUntil > new Date()) {
+      res.status(423).json({ message: "Account locked. Try again later." });
+      return;
+    }
 
-    const accessToken = signAdminToken({ sub: admin.id, email: admin.email, role: admin.role });
+    const accessToken = signAdminToken({
+      sub: admin.id,
+      email: admin.email,
+      role: admin.role,
+      tv: admin.tokenVersion,
+    });
     res.json({ data: { accessToken } });
   } catch {
     res.status(401).json({ message: "Invalid refresh token" });
@@ -151,7 +190,8 @@ router.post(
   async (req, res) => {
     const parsed = changePasswordSchema.safeParse(req.body);
     if (!parsed.success) {
-      res.status(400).json({ message: "Invalid password payload" });
+      const first = parsed.error.issues[0]?.message;
+      res.status(400).json({ message: first ?? "Invalid password payload" });
       return;
     }
 
@@ -170,7 +210,7 @@ router.post(
     const passwordHash = await hashPassword(parsed.data.newPassword);
     await prisma.adminUser.update({
       where: { id: admin.id },
-      data: { passwordHash },
+      data: { passwordHash, tokenVersion: { increment: 1 } },
     });
 
     res.json({ message: "Password updated" });
@@ -341,7 +381,12 @@ router.post(
   },
 );
 
-router.post("/logout", requireAdminAuth, (_req, res) => {
+router.post("/logout", requireAdminAuth, async (req, res) => {
+  await prisma.adminUser.update({
+    where: { id: req.admin!.id },
+    data: { tokenVersion: { increment: 1 } },
+  });
+  await writeAuthAudit({ adminId: req.admin!.id, action: "auth.logout", req }).catch(() => undefined);
   res.json({ message: "Logged out" });
 });
 
@@ -360,22 +405,44 @@ router.post("/mfa", rateLimit(10, 60_000), async (req, res) => {
   }
 
   const admin = await prisma.adminUser.findUnique({ where: { id: adminId } });
-  if (!admin?.mfaSecret || !admin.mfaEnabled) {
+  if (!admin) {
+    res.status(401).json({ message: "MFA not configured" });
+    return;
+  }
+  if (admin.lockedUntil && admin.lockedUntil > new Date()) {
+    res.status(423).json({ message: "Account locked. Try again later." });
+    return;
+  }
+
+  if (!admin.mfaSecret || !admin.mfaEnabled) {
     res.status(401).json({ message: "MFA not configured" });
     return;
   }
 
   if (!verifyMfaCode(admin.mfaSecret, parsed.data.code)) {
+    const failedLoginCount = admin.failedLoginCount + 1;
+    const lockedUntil = failedLoginCount >= LOCK_AFTER ? new Date(Date.now() + LOCK_MS) : null;
+    await prisma.adminUser.update({
+      where: { id: admin.id },
+      data: { failedLoginCount, lockedUntil },
+    });
+    await writeAuthAudit({ adminId: admin.id, action: "auth.mfa.failed", req }).catch(() => undefined);
     res.status(401).json({ message: "Invalid MFA code" });
     return;
   }
 
-  await prisma.adminUser.update({
+  const updated = await prisma.adminUser.update({
     where: { id: admin.id },
-    data: { lastLoginAt: new Date() },
+    data: {
+      lastLoginAt: new Date(),
+      lastActivityAt: new Date(),
+      failedLoginCount: 0,
+      lockedUntil: null,
+    },
   });
+  await writeAuthAudit({ adminId: admin.id, action: "auth.login.success", req }).catch(() => undefined);
 
-  res.json({ data: sessionResponse(admin) });
+  res.json({ data: sessionResponse({ ...admin, ...updated }) });
 });
 
 export default router;

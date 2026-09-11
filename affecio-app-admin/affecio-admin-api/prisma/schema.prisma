@@ -8,6 +8,9 @@ datasource db {
 
 enum UserAccountStatus {
   active
+  warned
+  restricted
+  shadowbanned
   suspended
   banned
 }
@@ -129,6 +132,7 @@ enum MediaKind {
 enum MediaUploadStatus {
   PENDING
   CONFIRMED
+  HIDDEN
 }
 
 enum SwipeAction {
@@ -181,19 +185,156 @@ enum VerificationStatus {
   rejected
 }
 
+enum SupportTicketStatus {
+  open
+  in_progress
+  waiting_on_user
+  escalated
+  resolved
+  closed
+}
+
+enum SupportTicketCategory {
+  account
+  safety
+  matching
+  billing
+  technical
+  other
+}
+
+enum SupportTicketPriority {
+  low
+  medium
+  high
+  urgent
+}
+
+enum SupportMessageAuthor {
+  user
+  agent
+  system
+  internal
+}
+
+enum SupportEscalationTarget {
+  admin
+  developer
+}
+
+enum SupportEscalationStatus {
+  open
+  acknowledged
+  resolved
+}
+
 model AdminUser {
-  id            String         @id @default(cuid())
-  email         String         @unique
-  passwordHash  String
-  name          String
-  role          AdminRole      @default(admin)
-  mfaEnabled    Boolean        @default(false)
-  mfaSecret     String?
-  lastLoginAt   DateTime?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  auditLogs     AuditLog[]
-  pushCampaigns PushCampaign[]
+  id                   String              @id @default(cuid())
+  email                String              @unique
+  passwordHash         String
+  name                 String
+  role                 AdminRole           @default(admin)
+  mfaEnabled           Boolean             @default(false)
+  mfaSecret            String?
+  lastLoginAt          DateTime?
+  lastActivityAt       DateTime?
+  tokenVersion         Int                 @default(0)
+  failedLoginCount     Int                 @default(0)
+  lockedUntil          DateTime?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  auditLogs            AuditLog[]
+  pushCampaigns        PushCampaign[]
+  assignedTickets      SupportTicket[]     @relation("TicketAssignee")
+  createdTickets       SupportTicket[]     @relation("TicketCreatedBy")
+  supportMessages      SupportMessage[]
+  escalationsCreated   SupportEscalation[] @relation("EscalationCreatedBy")
+  escalationsHandled   SupportEscalation[] @relation("EscalationHandledBy")
+  userAdminActions     UserAdminAction[]
+  serviceHealthUpdates ServiceHealthEvent[]
+}
+
+model SupportTicket {
+  id            String                 @id @default(cuid())
+  userId        String
+  subject       String
+  category      SupportTicketCategory  @default(account)
+  priority      SupportTicketPriority  @default(medium)
+  status        SupportTicketStatus    @default(open)
+  assignedToId  String?
+  assignedTo    AdminUser?             @relation("TicketAssignee", fields: [assignedToId], references: [id])
+  createdById   String?
+  createdBy     AdminUser?             @relation("TicketCreatedBy", fields: [createdById], references: [id])
+  resolvedAt    DateTime?
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+  messages      SupportMessage[]
+  escalations   SupportEscalation[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([assignedToId])
+  @@index([createdAt])
+}
+
+model SupportMessage {
+  id         String               @id @default(cuid())
+  ticketId   String
+  ticket     SupportTicket        @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorType SupportMessageAuthor
+  adminId    String?
+  admin      AdminUser?           @relation(fields: [adminId], references: [id])
+  body       String
+  createdAt  DateTime             @default(now())
+
+  @@index([ticketId])
+  @@index([createdAt])
+}
+
+model SupportEscalation {
+  id          String                   @id @default(cuid())
+  ticketId    String
+  ticket      SupportTicket            @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  target      SupportEscalationTarget
+  reason      String
+  status      SupportEscalationStatus  @default(open)
+  createdById String
+  createdBy   AdminUser                @relation("EscalationCreatedBy", fields: [createdById], references: [id])
+  handledById String?
+  handledBy   AdminUser?               @relation("EscalationHandledBy", fields: [handledById], references: [id])
+  notes       String?
+  createdAt   DateTime                 @default(now())
+  resolvedAt  DateTime?
+
+  @@index([ticketId])
+  @@index([target])
+  @@index([status])
+}
+
+enum UserAdminActionType {
+  note
+  warn
+  restrict
+  shadowban
+  suspend
+  ban
+  restore
+  hide_media
+  unhide_media
+  edit_profile
+}
+
+model UserAdminAction {
+  id        String               @id @default(cuid())
+  userId    String
+  adminId   String
+  admin     AdminUser            @relation(fields: [adminId], references: [id])
+  action    UserAdminActionType
+  reason    String?
+  createdAt DateTime             @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
 }
 
 model PushDeviceToken {
@@ -267,4 +408,40 @@ model Verification {
 
   @@index([status])
   @@index([userId])
+}
+
+enum ServiceHealthStatus {
+  operational
+  degraded
+  partial_outage
+  major_outage
+  maintenance
+}
+
+model ServiceHealthComponent {
+  id          String              @id
+  groupId     String
+  groupName   String
+  name        String
+  status      ServiceHealthStatus @default(operational)
+  description String?
+  sortOrder   Int                 @default(0)
+  updatedAt   DateTime            @updatedAt
+  events      ServiceHealthEvent[]
+
+  @@index([groupId])
+}
+
+model ServiceHealthEvent {
+  id          String                 @id @default(cuid())
+  componentId String
+  component   ServiceHealthComponent @relation(fields: [componentId], references: [id], onDelete: Cascade)
+  status      ServiceHealthStatus
+  message     String
+  createdById String?
+  createdBy   AdminUser?             @relation(fields: [createdById], references: [id])
+  createdAt   DateTime               @default(now())
+
+  @@index([componentId])
+  @@index([createdAt])
 }

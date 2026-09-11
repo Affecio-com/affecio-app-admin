@@ -2,6 +2,8 @@
 
 import { PageHeader } from "@/components/layout/PageHeader";
 import { AffecioMenuList, AffecioMenuRow } from "@/components/affecio/AffecioMenuRow";
+import { AffecioCard } from "@/components/affecio/AffecioCard";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { SettingsProfileCard } from "@/components/settings/SettingsSections";
 import { useAuth } from "@/providers/AuthProvider";
 import { Bell, Shield, User, Users } from "lucide-react";
@@ -14,6 +16,13 @@ export default function SettingsPage() {
     <div className="mx-auto max-w-3xl">
       <PageHeader title="Settings" description="Manage your account, security, and workspace preferences." />
       <SettingsProfileCard />
+      <AffecioCard className="mb-6 flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-affecio-text">Appearance</p>
+          <p className="mt-0.5 text-sm text-affecio-muted">Switch between light and dark workspace modes.</p>
+        </div>
+        <ThemeToggle showLabel />
+      </AffecioCard>
       <AffecioMenuList>
         <AffecioMenuRow
           href="/settings/profile"

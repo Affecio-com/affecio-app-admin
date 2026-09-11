@@ -10,9 +10,11 @@ import { SettingsBackLink, SettingsSection } from "@/components/settings/Setting
 import { ApiErrorMessage } from "@/components/shared/ApiErrorMessage";
 import { changePassword } from "@/services/adminAuth";
 import { useAuth } from "@/providers/AuthProvider";
+import { isStrongPassword, STRONG_PASSWORD_HINT } from "@/lib/password-policy";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 export default function SecuritySettingsPage() {
-  const { admin } = useAuth();
+  const { admin, logout } = useAuth();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -30,12 +32,13 @@ export default function SecuritySettingsPage() {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      setPasswordMessage("Password updated successfully.");
+      setPasswordMessage("Password updated. All sessions were revoked — sign in again.");
       setPasswordError("");
+      window.setTimeout(() => logout(), 800);
     },
     onError: (err) => {
       setPasswordMessage("");
-      setPasswordError(err instanceof Error ? err.message : "Failed to change password.");
+      setPasswordError(getApiErrorMessage(err, "Failed to change password."));
     },
   });
 
@@ -48,8 +51,8 @@ export default function SecuritySettingsPage() {
       />
 
       <div className="mx-auto max-w-2xl space-y-6">
-        <SettingsSection title="Change password" description="Use at least 8 characters.">
-          {passwordMessage ? <p className="mb-4 text-sm text-emerald-400">{passwordMessage}</p> : null}
+        <SettingsSection title="Change password" description={STRONG_PASSWORD_HINT}>
+          {passwordMessage ? <p className="mb-4 text-sm text-emerald-700 dark:text-emerald-400">{passwordMessage}</p> : null}
           {passwordError ? (
             <div className="mb-4">
               <ApiErrorMessage message={passwordError} />
@@ -78,7 +81,12 @@ export default function SecuritySettingsPage() {
               autoComplete="new-password"
             />
             <AffecioButton
-              disabled={changePasswordMutation.isPending || !currentPassword || !newPassword}
+              disabled={
+                changePasswordMutation.isPending ||
+                !currentPassword ||
+                !isStrongPassword(newPassword) ||
+                newPassword !== confirmPassword
+              }
               onClick={() => changePasswordMutation.mutate()}
             >
               Update password

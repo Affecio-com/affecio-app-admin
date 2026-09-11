@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { AdminSession, AdminUser } from "@/types/admin";
-import { clearStoredToken, getStoredToken, setStoredToken } from "@/lib/auth-storage";
+import { clearStoredToken, ensureSessionCookie, getStoredToken, setStoredToken } from "@/lib/auth-storage";
 import * as adminAuthService from "@/services/adminAuth";
 
 interface UseAdminAuthReturn {
@@ -31,13 +31,16 @@ export function useAdminAuth(): UseAdminAuthReturn {
 
     adminAuthService
       .getMe()
-      .then(setAdmin)
+      .then((me) => {
+        ensureSessionCookie();
+        setAdmin(me);
+      })
       .catch(() => clearStoredToken())
       .finally(() => setIsLoading(false));
   }, []);
 
   const setSession = useCallback((session: AdminSession) => {
-    setStoredToken(session.accessToken);
+    setStoredToken(session.accessToken, session.refreshToken);
     setAdmin(session.admin);
   }, []);
 
@@ -46,6 +49,7 @@ export function useAdminAuth(): UseAdminAuthReturn {
     if (!token) return null;
     try {
       const me = await adminAuthService.getMe();
+      ensureSessionCookie();
       setAdmin(me);
       return me;
     } catch {
@@ -75,9 +79,11 @@ export function useAdminAuth(): UseAdminAuthReturn {
   );
 
   const logout = useCallback(() => {
+    void adminAuthService.logout().catch(() => undefined);
     clearStoredToken();
     setAdmin(null);
-  }, []);
+    router.replace("/login");
+  }, [router]);
 
   return {
     admin,

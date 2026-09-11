@@ -13,11 +13,18 @@ import supportRoutes from "./support";
 import developersRoutes from "./developers";
 import pushNotificationsRoutes from "./pushNotifications";
 import adminUsersRoutes from "./adminUsers";
+import { getPublicStatusSnapshot } from "../services/healthService";
+import { rateLimit } from "../middleware/rateLimit";
 
 const router = Router();
 
 router.get("/health", (_req, res) => {
-  res.json({ status: "ok", service: "affecio-admin-api" });
+  res.json({ status: "ok", service: "affecio-admin-api", uptime: process.uptime(), timestamp: new Date().toISOString() });
+});
+
+router.get("/status", rateLimit(120, 60_000), async (_req, res) => {
+  const data = await getPublicStatusSnapshot();
+  res.json({ data });
 });
 
 router.use("/admin/auth", authRoutes);

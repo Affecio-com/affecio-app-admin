@@ -8,6 +8,7 @@ export interface AdminAccount {
   role: AdminRole;
   mfaEnabled: boolean;
   lastLoginAt: string | null;
+  lastActivityAt?: string | null;
   createdAt: string;
 }
 

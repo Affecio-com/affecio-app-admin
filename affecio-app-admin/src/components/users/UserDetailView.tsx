@@ -1,14 +1,19 @@
 "use client";
 
-import Link from "next/link";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { AppUserCell } from "@/components/users/AppUserCell";
 import { AffecioCard } from "@/components/affecio/AffecioCard";
+import { AffecioButton } from "@/components/affecio/AffecioButton";
 import { AffecioStatCard } from "@/components/affecio/AffecioStatCard";
 import { DataTable } from "@/components/shared/DataTable";
 import { StatusPill, callStatusTone, accountStatusTone, activityStatusTone, reportStatusTone, verificationStatusTone } from "@/components/shared/StatusPill";
-import type { AppUserDetail } from "@/types/user";
+import type { AppUserDetail, UserMediaItem } from "@/types/user";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Ban, Flag, Heart, ImageIcon, Phone, Repeat, Shield, UserCheck } from "lucide-react";
+import { useAuth } from "@/providers/AuthProvider";
+import { enforceRoles, hasRole } from "@/config/access";
+import { setUserMediaHidden } from "@/services/users";
 
 function DetailField({
   label,
@@ -47,19 +52,15 @@ function DetailSection({
 }) {
   return (
     <AffecioCard>
-      <h2 className="font-mondwest text-lg font-semibold text-affecio-text">{title}</h2>
+      <h2 className="text-base font-semibold tracking-tight text-affecio-text">{title}</h2>
       {description ? <p className="mt-1 text-sm text-affecio-muted">{description}</p> : null}
       <div className="mt-4">{children}</div>
     </AffecioCard>
   );
 }
 
-function UserLink({ user }: { user: { id: string; name: string } }) {
-  return (
-    <Link href={`/users/${user.id}`} className="font-medium hover:underline">
-      {user.name}
-    </Link>
-  );
+function UserLink({ user }: { user: { id: string; name: string; profilePhotoUrl?: string | null } }) {
+  return <AppUserCell user={user} />;
 }
 
 function formatLocation(location: unknown): string {
@@ -87,6 +88,32 @@ function isVideoMime(mime: string): boolean {
 
 interface UserDetailViewProps {
   user: AppUserDetail;
+}
+
+function MediaHideButton({ userId, item }: { userId: string; item: UserMediaItem }) {
+  const { admin } = useAuth();
+  const queryClient = useQueryClient();
+  const canHide = hasRole(admin?.role, enforceRoles);
+  const hidden = item.status === "HIDDEN";
+
+  const mutation = useMutation({
+    mutationFn: () => setUserMediaHidden(userId, item.id, !hidden),
+    onSuccess: (updated) => {
+      void queryClient.setQueryData(["user", userId], updated);
+    },
+  });
+
+  if (!canHide || item.status === "PENDING") return null;
+
+  return (
+    <AffecioButton
+      variant="secondary"
+      disabled={mutation.isPending}
+      onClick={() => mutation.mutate()}
+    >
+      {hidden ? "Restore to profile" : "Hide from profile"}
+    </AffecioButton>
+  );
 }
 
 export function UserDetailView({ user }: UserDetailViewProps) {
@@ -138,6 +165,41 @@ export function UserDetailView({ user }: UserDetailViewProps) {
         </dl>
       </DetailSection>
 
+      <DetailSection
+        title="Case history"
+        description="Trust & Safety and support actions on this account."
+      >
+        {(user.caseHistory ?? []).length === 0 ? (
+          <p className="text-sm text-affecio-muted">No enforcement actions or case notes yet.</p>
+        ) : (
+          <DataTable
+            data={user.caseHistory ?? []}
+            columns={[
+              {
+                key: "action",
+                header: "Action",
+                cell: (item) => <StatusPill label={item.action} />,
+              },
+              {
+                key: "reason",
+                header: "Reason",
+                cell: (item) => item.reason ?? "—",
+              },
+              {
+                key: "admin",
+                header: "By",
+                cell: (item) => `${item.admin.name} · ${item.admin.role.replace(/_/g, " ")}`,
+              },
+              {
+                key: "when",
+                header: "When",
+                cell: (item) => formatDateTime(item.createdAt),
+              },
+            ]}
+          />
+        )}
+      </DetailSection>
+
       <div className="grid gap-6 xl:grid-cols-2">
         <DetailSection title="Report summary">
           <dl>
@@ -175,6 +237,39 @@ export function UserDetailView({ user }: UserDetailViewProps) {
                 cell: (r) => <StatusPill label={r.status} tone={reportStatusTone(r.status)} />,
               },
               { key: "reason", header: "Reason", cell: (r) => r.reason },
+              {
+                key: "reporter",
+                header: "Reporter",
+                cell: (r) => <AppUserCell user={r.reporter} fallbackId={r.reporterId} />,
+              },
+              { key: "when", header: "Filed", cell: (r) => formatDateTime(r.createdAt) },
+            ]}
+          />
+        )}
+      </DetailSection>
+
+      <DetailSection
+        title="Reports filed by this user"
+        description={`${user.reportsFiled.length} report(s) they submitted.`}
+      >
+        {user.reportsFiled.length === 0 ? (
+          <p className="text-sm text-affecio-muted">This member has not filed any reports.</p>
+        ) : (
+          <DataTable
+            data={user.reportsFiled}
+            columns={[
+              { key: "type", header: "Type", cell: (r) => <StatusPill label={r.type} tone="muted" /> },
+              {
+                key: "status",
+                header: "Status",
+                cell: (r) => <StatusPill label={r.status} tone={reportStatusTone(r.status)} />,
+              },
+              { key: "reason", header: "Reason", cell: (r) => r.reason },
+              {
+                key: "target",
+                header: "Reported",
+                cell: (r) => <AppUserCell user={r.target} fallbackId={r.targetId} />,
+              },
               { key: "when", header: "Filed", cell: (r) => formatDateTime(r.createdAt) },
             ]}
           />
@@ -276,7 +371,13 @@ export function UserDetailView({ user }: UserDetailViewProps) {
                       <StatusPill label={item.kind.replace(/_/g, " ")} tone="muted" />
                       <StatusPill
                         label={item.status}
-                        tone={item.status === "CONFIRMED" ? "success" : "warning"}
+                        tone={
+                          item.status === "CONFIRMED"
+                            ? "success"
+                            : item.status === "HIDDEN"
+                              ? "danger"
+                              : "warning"
+                        }
                       />
                     </div>
                     <p className="truncate text-affecio-muted">{item.mimeType}</p>
@@ -292,6 +393,9 @@ export function UserDetailView({ user }: UserDetailViewProps) {
                         Open file
                       </a>
                     ) : null}
+                    <div className="pt-2">
+                      <MediaHideButton userId={user.id} item={item} />
+                    </div>
                   </div>
                 </div>
               ))}
@@ -473,7 +577,7 @@ export function UserDetailView({ user }: UserDetailViewProps) {
               <Repeat className="h-4 w-4" />
               <span className="text-xs uppercase tracking-wide">Swipes</span>
             </div>
-            <p className="mt-2 font-mondwest text-2xl font-semibold">
+            <p className="mt-2 text-2xl font-semibold tracking-tight">
               {user.stats.swipesSentCount} sent · {user.stats.swipesReceivedCount} received
             </p>
           </div>
@@ -482,7 +586,7 @@ export function UserDetailView({ user }: UserDetailViewProps) {
               <Shield className="h-4 w-4" />
               <span className="text-xs uppercase tracking-wide">Blocks</span>
             </div>
-            <p className="mt-2 font-mondwest text-2xl font-semibold">
+            <p className="mt-2 text-2xl font-semibold tracking-tight">
               {user.stats.blocksGivenCount} given · {user.stats.blocksReceivedCount} received
             </p>
           </div>
@@ -491,7 +595,7 @@ export function UserDetailView({ user }: UserDetailViewProps) {
               <Heart className="h-4 w-4" />
               <span className="text-xs uppercase tracking-wide">Matches</span>
             </div>
-            <p className="mt-2 font-mondwest text-2xl font-semibold">{user.stats.matchesCount}</p>
+            <p className="mt-2 text-2xl font-semibold tracking-tight">{user.stats.matchesCount}</p>
           </div>
         </dl>
       </DetailSection>

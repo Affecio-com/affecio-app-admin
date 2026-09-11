@@ -1,4 +1,5 @@
 import { AffecioCard } from "@/components/affecio/AffecioCard";
+import { AppUserCell } from "@/components/users/AppUserCell";
 import type { AppUser } from "@/types/user";
 import { formatDateTime } from "@/lib/format";
 
@@ -11,8 +12,7 @@ export function UserDetailPanel({ user }: UserDetailPanelProps) {
     <AffecioCard>
       <div className="space-y-4">
         <div>
-          <h2 className="font-mondwest text-xl font-semibold">{user.name}</h2>
-          <p className="text-sm text-affecio-muted">{user.email ?? user.phoneNumber}</p>
+          <AppUserCell user={user} size="lg" subtitle />
         </div>
         <dl className="grid gap-3 text-sm">
           <div>
