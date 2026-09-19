@@ -1,14 +1,18 @@
 import type { ListReportsInput, UpdateReportInput } from "../schemas/reports";
 import { prisma } from "../lib/prisma";
 import { hydrateUsersByIds } from "../lib/profilePhotos";
+import { toReportApiShape, type ReportDbRow } from "../lib/reportMapping";
 
-async function withUsers<T extends { reporterId: string; targetId: string }>(rows: T[]) {
-  const users = await hydrateUsersByIds(rows.flatMap((r) => [r.reporterId, r.targetId]));
-  return rows.map((row) => ({
-    ...row,
-    reporter: users.get(row.reporterId) ?? null,
-    target: users.get(row.targetId) ?? null,
-  }));
+async function withUsers(rows: ReportDbRow[]) {
+  const users = await hydrateUsersByIds(rows.flatMap((r) => [r.reporterId, r.reportedId]));
+  return rows.map((row) => {
+    const api = toReportApiShape(row);
+    return {
+      ...api,
+      reporter: users.get(row.reporterId) ?? null,
+      target: users.get(row.reportedId) ?? null,
+    };
+  });
 }
 
 export async function listReports(input: ListReportsInput) {

@@ -10,6 +10,7 @@ import type {
 } from "../schemas/users";
 import { prisma } from "../lib/prisma";
 import { getProfilePhotoMap, hydrateUsersByIds, withPhoto } from "../lib/profilePhotos";
+import { toUserReportItem } from "../lib/reportMapping";
 
 const userSummarySelect = {
   id: true,
@@ -112,13 +113,13 @@ async function enrichUserListItems(
     await Promise.all([
     prisma.userAdminMeta.findMany({ where: { userId: { in: userIds } } }),
     prisma.report.groupBy({
-      by: ["targetId"],
-      where: { targetId: { in: userIds } },
+      by: ["reportedId"],
+      where: { reportedId: { in: userIds } },
       _count: { _all: true },
     }),
     prisma.report.groupBy({
-      by: ["targetId"],
-      where: { targetId: { in: userIds }, status: "open" },
+      by: ["reportedId"],
+      where: { reportedId: { in: userIds }, status: "open" },
       _count: { _all: true },
     }),
     prisma.verification.findMany({
@@ -134,8 +135,8 @@ async function enrichUserListItems(
   ]);
 
   const metaMap = new Map(metaRows.map((m) => [m.userId, m]));
-  const reportMap = new Map(reportCounts.map((r) => [r.targetId, r._count._all]));
-  const openReportMap = new Map(openReportCounts.map((r) => [r.targetId, r._count._all]));
+  const reportMap = new Map(reportCounts.map((r) => [r.reportedId, r._count._all]));
+  const openReportMap = new Map(openReportCounts.map((r) => [r.reportedId, r._count._all]));
   const mediaMap = new Map(mediaCounts.map((m) => [m.userId, m._count._all]));
 
   const verificationMap = new Map<string, (typeof verifications)[number]>();
@@ -218,10 +219,10 @@ export async function listUsers(input: ListUsersInput) {
   if (hasOpenReports === true) {
     const openTargets = await prisma.report.findMany({
       where: { status: "open" },
-      select: { targetId: true },
-      distinct: ["targetId"],
+      select: { reportedId: true },
+      distinct: ["reportedId"],
     });
-    const ids = openTargets.map((r) => r.targetId);
+    const ids = openTargets.map((r) => r.reportedId);
     if (ids.length === 0) {
       return { data: [], total: 0, page, pageSize, totalPages: 0 };
     }
@@ -298,10 +299,40 @@ export async function createUser(input: CreateUserInput) {
 }
 
 export async function deleteUser(id: string) {
-  await prisma.userAdminAction.deleteMany({ where: { userId: id } });
-  await prisma.userAdminMeta.deleteMany({ where: { userId: id } });
-  await prisma.pushDeviceToken.deleteMany({ where: { userId: id } });
-  await prisma.user.delete({ where: { id } });
+  const user = await prisma.user.findUnique({ where: { id }, select: { id: true } });
+  if (!user) {
+    const err = new Error("User not found") as Error & { code: string };
+    err.code = "NOT_FOUND";
+    throw err;
+  }
+
+  await prisma.$transaction(async (tx) => {
+    // CallSession -> User FK is RESTRICT; reports null out callSessionId on session delete.
+    await tx.callSession.deleteMany({
+      where: { OR: [{ userAId: id }, { userBId: id }] },
+    });
+
+    const ticketIds = (
+      await tx.supportTicket.findMany({
+        where: { userId: id },
+        select: { id: true },
+      })
+    ).map((t) => t.id);
+    if (ticketIds.length > 0) {
+      await tx.supportMessage.deleteMany({ where: { ticketId: { in: ticketIds } } });
+      await tx.supportEscalation.deleteMany({ where: { ticketId: { in: ticketIds } } });
+      await tx.supportTicket.deleteMany({ where: { id: { in: ticketIds } } });
+    }
+
+    await tx.verification.deleteMany({ where: { userId: id } });
+    await tx.userAdminAction.deleteMany({ where: { userId: id } });
+    await tx.userAdminMeta.deleteMany({ where: { userId: id } });
+    await tx.pushDeviceToken.deleteMany({ where: { userId: id } });
+
+    // Block, Match, Swipe, UserMedia, Report rows cascade from User delete.
+    await tx.user.delete({ where: { id } });
+  });
+
   return { deleted: true };
 }
 
@@ -421,7 +452,7 @@ export async function getUserById(id: string) {
   const [adminMeta, reportsAsTarget, reportsFiled, verifications, pushTokens, caseHistory] = await Promise.all([
     prisma.userAdminMeta.findUnique({ where: { userId: id } }),
     prisma.report.findMany({
-      where: { targetId: id },
+      where: { reportedId: id },
       orderBy: { createdAt: "desc" },
       take: 50,
     }),
@@ -513,13 +544,13 @@ export async function getUserById(id: string) {
     ...user.Swipe_Swipe_toUserIdToUser.map((s) => s.User_Swipe_fromUserIdToUser.id),
     ...Array.from(callMap.values()).map((c) => c.otherUser.id),
     ...reportsAsTarget.map((r) => r.reporterId),
-    ...reportsFiled.map((r) => r.targetId),
+    ...reportsFiled.map((r) => r.reportedId),
   ];
   const [photoMap, reportPeople] = await Promise.all([
     getProfilePhotoMap(relatedIds),
     hydrateUsersByIds([
       ...reportsAsTarget.map((r) => r.reporterId),
-      ...reportsFiled.map((r) => r.targetId),
+      ...reportsFiled.map((r) => r.reportedId),
     ]),
   ]);
   const patchRef = <T extends { id: string }>(ref: T) => withPhoto(ref, photoMap);
@@ -593,24 +624,12 @@ export async function getUserById(id: string) {
       swipesReceivedCount: user.Swipe_Swipe_toUserIdToUser.length,
       callsCount: callMap.size,
     },
-    reportsAsTarget: reportsAsTarget.map((r) => ({
-      id: r.id,
-      type: r.type,
-      status: r.status,
-      reason: r.reason,
-      reporterId: r.reporterId,
-      reporter: reportPeople.get(r.reporterId) ?? null,
-      createdAt: r.createdAt.toISOString(),
-    })),
-    reportsFiled: reportsFiled.map((r) => ({
-      id: r.id,
-      type: r.type,
-      status: r.status,
-      reason: r.reason,
-      targetId: r.targetId,
-      target: reportPeople.get(r.targetId) ?? null,
-      createdAt: r.createdAt.toISOString(),
-    })),
+    reportsAsTarget: reportsAsTarget.map((r) =>
+      toUserReportItem(r, "target", reportPeople),
+    ),
+    reportsFiled: reportsFiled.map((r) =>
+      toUserReportItem(r, "filed", reportPeople),
+    ),
     verifications: verifications.map((v) => ({
       id: v.id,
       status: v.status,

@@ -177,8 +177,16 @@ router.delete(
     try {
       await userAdminService.deleteUser(getRouteParam(req.params.id));
       res.json({ data: { deleted: true } });
-    } catch {
-      res.status(404).json({ message: "User not found or could not be deleted." });
+    } catch (err) {
+      const code = err && typeof err === "object" && "code" in err ? String(err.code) : "";
+      if (code === "NOT_FOUND" || code === "P2025") {
+        res.status(404).json({ message: "User not found." });
+        return;
+      }
+      console.error("deleteUser failed:", err);
+      res.status(500).json({
+        message: "Could not delete user. Check server logs or retry after resolving related data.",
+      });
     }
   },
 );

@@ -165,6 +165,12 @@ enum PushAudience {
   active_users
 }
 
+enum ReportContext {
+  VIDEO_CALL
+  PROFILE
+  OTHER
+}
+
 enum ReportStatus {
   open
   reviewing
@@ -384,15 +390,20 @@ model AuditLog {
 }
 
 model Report {
-  id         String       @id @default(cuid())
-  type       ReportType
-  status     ReportStatus @default(open)
-  reporterId String
-  targetId   String
-  reason     String
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
+  id            String        @id @default(cuid())
+  reporterId    String
+  reportedId    String
+  reason        String
+  context       ReportContext @default(OTHER)
+  callSessionId String?
+  status        ReportStatus  @default(open)
+  type          ReportType    @default(user)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
+  @@index([reporterId])
+  @@index([reportedId])
+  @@index([callSessionId])
   @@index([status])
   @@index([type])
 }
