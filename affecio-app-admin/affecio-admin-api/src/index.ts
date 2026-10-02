@@ -23,8 +23,17 @@ function parseCorsOrigins(): string[] {
     .map((o) => o.trim())
     .filter(Boolean);
 
-  for (const host of [process.env.VERCEL_URL, process.env.VERCEL_BRANCH_URL]) {
-    if (host) origins.push(`https://${host.replace(/^https?:\/\//, "")}`);
+  for (const host of [
+    process.env.VERCEL_URL,
+    process.env.VERCEL_BRANCH_URL,
+    process.env.VERCEL_PROJECT_PRODUCTION_URL,
+  ]) {
+    if (!host) continue;
+    const normalized = host.replace(/^https?:\/\//, "");
+    origins.push(`https://${normalized}`);
+    if (!normalized.startsWith("www.")) {
+      origins.push(`https://www.${normalized}`);
+    }
   }
 
   return [...new Set(origins)];
@@ -32,13 +41,27 @@ function parseCorsOrigins(): string[] {
 
 const allowedOrigins = parseCorsOrigins();
 
+function isAllowedBrowserOrigin(origin: string): boolean {
+  if (allowedOrigins.includes(origin)) return true;
+  try {
+    const { hostname, protocol } = new URL(origin);
+    if (protocol !== "http:" && protocol !== "https:") return false;
+    if (hostname === "localhost" || hostname === "127.0.0.1") return true;
+    if (hostname.endsWith(".vercel.app") || hostname.endsWith(".vercel.sh")) return true;
+  } catch {
+    return false;
+  }
+  return false;
+}
+
 const adminCors = cors({
   origin(origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (!origin || isAllowedBrowserOrigin(origin)) {
       callback(null, true);
       return;
     }
-    callback(new Error(`CORS blocked for origin: ${origin}`));
+    console.warn("CORS rejected origin:", origin, "allowed:", allowedOrigins);
+    callback(null, false);
   },
   credentials: true,
   methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
@@ -71,8 +94,12 @@ app.use((_req, res) => {
 Sentry.setupExpressErrorHandler(app);
 
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  console.error(err);
-  res.status(500).json({ message: "Internal server error" });
+  console.error("API error:", err);
+  if (res.headersSent) return;
+  const isCors = err.message.includes("CORS");
+  res.status(isCors ? 403 : 500).json({
+    message: isCors ? "Origin not allowed" : "Internal server error",
+  });
 });
 
 if (process.env.VERCEL !== "1") {

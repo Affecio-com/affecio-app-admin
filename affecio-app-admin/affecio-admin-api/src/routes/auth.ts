@@ -70,6 +70,7 @@ const LOCK_AFTER = 5;
 const LOCK_MS = 15 * 60_000;
 
 router.post("/login", rateLimit(8, 60_000), async (req, res) => {
+  try {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ message: "Invalid credentials" });
@@ -114,6 +115,12 @@ router.post("/login", rateLimit(8, 60_000), async (req, res) => {
   await writeAuthAudit({ adminId: admin.id, action: "auth.login.success", req }).catch(() => undefined);
 
   res.json({ data: sessionResponse({ ...admin, ...updated }) });
+  } catch (err) {
+    console.error("login failed:", err);
+    if (!res.headersSent) {
+      res.status(500).json({ message: "Login failed. Check API database and auth configuration." });
+    }
+  }
 });
 
 router.post("/refresh", rateLimit(30, 60_000), async (req, res) => {

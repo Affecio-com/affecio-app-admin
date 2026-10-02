@@ -13,6 +13,12 @@ export function getApiErrorMessage(error: unknown, fallback: string): string {
     if (error.code === "ERR_NETWORK") {
       return `Cannot reach the admin API at ${resolveAdminApiBaseUrl()}. Check that the server is up and CORS allows this app.`;
     }
+    if (error.response?.status === 500) {
+      return (
+        (typeof message === "string" && message) ||
+        "Server error during login. Confirm DATABASE_URL and ADMIN_JWT_SECRET on the affecio-admin-api service in Vercel."
+      );
+    }
   }
   if (error instanceof Error && error.message) {
     return error.message;
