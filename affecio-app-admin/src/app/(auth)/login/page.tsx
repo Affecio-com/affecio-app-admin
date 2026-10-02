@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import { AffecioButton } from "@/components/affecio/AffecioButton";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { PasswordInput } from "@/components/auth/PasswordInput";
@@ -11,7 +11,17 @@ import { useAuth } from "@/providers/AuthProvider";
 import { getApiErrorMessage } from "@/lib/api-error";
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginPageContent />
+    </Suspense>
+  );
+}
+
+function LoginPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const invited = searchParams.get("invited") === "1";
   const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -44,6 +54,11 @@ export default function LoginPage() {
       title="Sign in"
       description="Use your Affecio admin credentials to access the internal operations console."
     >
+      {invited ? (
+        <p className="mb-4 rounded-lg border border-affecio-border bg-affecio-input px-3 py-2 text-sm text-affecio-text">
+          Your account is ready. Sign in with the password you just created.
+        </p>
+      ) : null}
       <form onSubmit={handleSubmit} className="space-y-5">
         <div className="space-y-2">
           <label htmlFor="email" className="text-sm font-medium text-affecio-text">

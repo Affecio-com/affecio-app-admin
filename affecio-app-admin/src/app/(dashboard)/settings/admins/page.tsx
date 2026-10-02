@@ -22,8 +22,8 @@ import { StatusPill } from "@/components/shared/StatusPill";
 import { TableSkeleton } from "@/components/shared/LoadingSkeleton";
 import { ApiErrorMessage } from "@/components/shared/ApiErrorMessage";
 import { formatDateTime, formatRelativeTime } from "@/lib/format";
-import { createAdminUser, getAdminUsers } from "@/services/adminUsers";
-import { isStrongPassword, STRONG_PASSWORD_HINT } from "@/lib/password-policy";
+import { getAdminUsers, inviteAdminUser } from "@/services/adminUsers";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type { AdminRole } from "@/types/admin";
 
 const ROLES: AdminRole[] = ["super_admin", "admin", "moderator", "support", "developer", "marketing"];
@@ -40,10 +40,10 @@ function AdminUsersContent() {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formError, setFormError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [form, setForm] = useState({
     name: "",
     email: "",
-    password: "",
     role: "admin" as AdminRole,
   });
 
@@ -52,29 +52,46 @@ function AdminUsersContent() {
     queryFn: getAdminUsers,
   });
 
-  const createMutation = useMutation({
-    mutationFn: createAdminUser,
-    onSuccess: () => {
+  const inviteMutation = useMutation({
+    mutationFn: inviteAdminUser,
+    onSuccess: (result) => {
       void queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       setDialogOpen(false);
-      setForm({ name: "", email: "", password: "", role: "admin" });
+      setForm({ name: "", email: "", role: "admin" });
       setFormError("");
+      if (result.emailSent) {
+        setSuccessMessage(`Invitation sent to ${result.email}.`);
+      } else if (result.acceptUrl) {
+        setSuccessMessage(`Email not configured. Dev accept link: ${result.acceptUrl}`);
+      } else {
+        setSuccessMessage(`Invitation created for ${result.email}.`);
+      }
     },
-    onError: () => setFormError("Failed to create admin. Check the email is unique."),
+    onError: (err) =>
+      setFormError(getApiErrorMessage(err, "Failed to send invitation. Check the email is unique.")),
   });
+
+  const admins = data?.admins ?? [];
+  const pending = data?.pendingInvites ?? [];
 
   return (
     <div>
       <PageHeader
         title="Admin management"
-        description="Create and review admin accounts."
+        description="Invite team members by email. They set their own password before signing in."
         action={
           <div className="flex items-center gap-3">
             <SettingsBackLink />
-            <AffecioButton onClick={() => setDialogOpen(true)}>+ Add admin</AffecioButton>
+            <AffecioButton onClick={() => setDialogOpen(true)}>+ Invite admin</AffecioButton>
           </div>
         }
       />
+
+      {successMessage ? (
+        <div className="mb-4 rounded-lg border border-affecio-border bg-affecio-surface px-4 py-3 text-sm text-affecio-text">
+          {successMessage}
+        </div>
+      ) : null}
 
       <ContentPanel showToolbar={false} showPagination={false}>
         {isLoading ? (
@@ -85,55 +102,86 @@ function AdminUsersContent() {
           <div className="p-5">
             <ApiErrorMessage message={error instanceof Error ? error.message : "Failed to load admins"} />
           </div>
-        ) : !data?.length ? (
-          <EmptyState title="No admins" description="Run db:seed or create the first admin account." />
+        ) : !admins.length && !pending.length ? (
+          <EmptyState title="No admins" description="Run db:seed or invite the first admin." />
         ) : (
-          <DataTable
-            data={data}
-            columns={[
-              { key: "name", header: "Name", cell: (a) => a.name },
-              { key: "email", header: "Email", cell: (a) => a.email },
-              {
-                key: "role",
-                header: "Role",
-                cell: (a) => <StatusPill label={a.role.replace(/_/g, " ")} />,
-              },
-              {
-                key: "mfa",
-                header: "MFA",
-                cell: (a) => (
-                  <StatusPill
-                    label={a.mfaEnabled ? "Enabled" : "Off"}
-                    tone={a.mfaEnabled ? "success" : "muted"}
-                  />
-                ),
-              },
-              {
-                key: "lastLogin",
-                header: "Last login",
-                cell: (a) => (a.lastLoginAt ? formatDateTime(a.lastLoginAt) : "Never"),
-              },
-              {
-                key: "lastActivity",
-                header: "Last activity",
-                cell: (a) => formatRelativeTime(a.lastActivityAt),
-              },
-            ]}
-          />
+          <div className="space-y-8 p-5">
+            {pending.length > 0 ? (
+              <div>
+                <h2 className="mb-3 text-sm font-medium text-affecio-muted">Pending invitations</h2>
+                <DataTable
+                  data={pending}
+                  columns={[
+                    { key: "name", header: "Name", cell: (a) => a.name },
+                    { key: "email", header: "Email", cell: (a) => a.email },
+                    {
+                      key: "role",
+                      header: "Role",
+                      cell: (a) => <StatusPill label={a.role.replace(/_/g, " ")} tone="warning" />,
+                    },
+                    {
+                      key: "expires",
+                      header: "Expires",
+                      cell: (a) => formatDateTime(a.expiresAt),
+                    },
+                    {
+                      key: "invitedBy",
+                      header: "Invited by",
+                      cell: (a) => a.invitedBy.name,
+                    },
+                  ]}
+                />
+              </div>
+            ) : null}
+
+            <div>
+              <h2 className="mb-3 text-sm font-medium text-affecio-muted">Active admins</h2>
+              <DataTable
+                data={admins}
+                columns={[
+                  { key: "name", header: "Name", cell: (a) => a.name },
+                  { key: "email", header: "Email", cell: (a) => a.email },
+                  {
+                    key: "role",
+                    header: "Role",
+                    cell: (a) => <StatusPill label={a.role.replace(/_/g, " ")} />,
+                  },
+                  {
+                    key: "mfa",
+                    header: "MFA",
+                    cell: (a) => (
+                      <StatusPill
+                        label={a.mfaEnabled ? "Enabled" : "Off"}
+                        tone={a.mfaEnabled ? "success" : "muted"}
+                      />
+                    ),
+                  },
+                  {
+                    key: "lastLogin",
+                    header: "Last login",
+                    cell: (a) => (a.lastLoginAt ? formatDateTime(a.lastLoginAt) : "Never"),
+                  },
+                  {
+                    key: "lastActivity",
+                    header: "Last activity",
+                    cell: (a) => formatRelativeTime(a.lastActivityAt),
+                  },
+                ]}
+              />
+            </div>
+          </div>
         )}
       </ContentPanel>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add admin</DialogTitle>
+            <DialogTitle>Invite admin</DialogTitle>
             <DialogDescription>
-              Create a new admin account. Temporary password: {STRONG_PASSWORD_HINT}
+              We will email a secure link so they can choose their password and sign in.
             </DialogDescription>
           </DialogHeader>
-          {formError ? (
-            <ApiErrorMessage message={formError} />
-          ) : null}
+          {formError ? <ApiErrorMessage message={formError} /> : null}
           <div className="space-y-3 py-2">
             <Input
               placeholder="Full name"
@@ -142,15 +190,9 @@ function AdminUsersContent() {
             />
             <Input
               type="email"
-              placeholder="Email"
+              placeholder="Work email"
               value={form.email}
               onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-            />
-            <Input
-              type="password"
-              placeholder="Temporary password (12+ chars, mixed case, number, symbol)"
-              value={form.password}
-              onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
             />
             <select
               className="h-10 w-full rounded-lg border border-affecio-border bg-affecio-input px-3 text-sm text-affecio-text"
@@ -169,16 +211,10 @@ function AdminUsersContent() {
               Cancel
             </AffecioButton>
             <AffecioButton
-              disabled={
-                createMutation.isPending ||
-                !form.name ||
-                !form.email ||
-                form.password.length < 12 ||
-                !isStrongPassword(form.password)
-              }
-              onClick={() => createMutation.mutate(form)}
+              disabled={inviteMutation.isPending || !form.name.trim() || !form.email.trim()}
+              onClick={() => inviteMutation.mutate(form)}
             >
-              Create admin
+              {inviteMutation.isPending ? "Sending…" : "Send invitation"}
             </AffecioButton>
           </DialogFooter>
         </DialogContent>

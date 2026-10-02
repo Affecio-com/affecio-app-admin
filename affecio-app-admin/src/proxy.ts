@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-const AUTH_PATHS = ["/login", "/mfa"];
+const AUTH_PATHS = ["/login", "/mfa", "/invite"];
 const SESSION_COOKIE = "affecio_admin_session";
 const STALE_JWT_COOKIE = "affecio_admin_token";
 

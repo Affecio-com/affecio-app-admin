@@ -234,6 +234,21 @@ enum SupportEscalationStatus {
   resolved
 }
 
+model AdminInvite {
+  id          String    @id @default(cuid())
+  email       String
+  name        String
+  role        AdminRole
+  tokenHash   String    @unique
+  expiresAt   DateTime
+  invitedById String
+  invitedBy   AdminUser @relation("AdminInvitesSent", fields: [invitedById], references: [id], onDelete: Cascade)
+  acceptedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([email])
+}
+
 model AdminUser {
   id                   String              @id @default(cuid())
   email                String              @unique
@@ -249,6 +264,7 @@ model AdminUser {
   lockedUntil          DateTime?
   createdAt            DateTime            @default(now())
   updatedAt            DateTime            @updatedAt
+  invitesSent          AdminInvite[]       @relation("AdminInvitesSent")
   auditLogs            AuditLog[]
   pushCampaigns        PushCampaign[]
   assignedTickets      SupportTicket[]     @relation("TicketAssignee")

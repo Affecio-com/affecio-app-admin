@@ -13,6 +13,7 @@ import supportRoutes from "./support";
 import developersRoutes from "./developers";
 import pushNotificationsRoutes from "./pushNotifications";
 import adminUsersRoutes from "./adminUsers";
+import adminInvitesRoutes from "./adminInvites";
 import { getPublicStatusSnapshot } from "../services/healthService";
 import { rateLimit } from "../middleware/rateLimit";
 import { prisma } from "../lib/prisma";
@@ -64,6 +65,7 @@ router.get("/status", rateLimit(120, 60_000), async (_req, res) => {
   res.json({ data });
 });
 
+router.use("/admin/auth/invite", adminInvitesRoutes);
 router.use("/admin/auth", authRoutes);
 router.use("/admin/v1/users", usersRoutes);
 router.use("/admin/v1/verifications", verificationsRoutes);
