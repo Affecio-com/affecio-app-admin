@@ -16,6 +16,7 @@
     "affecio-admin-api": {
       "root": "affecio-admin-api",
       "framework": "express",
+      "entrypoint": "src/index.ts",
       "buildCommand": "npm run build",
       "installCommand": "npm install"
     }
