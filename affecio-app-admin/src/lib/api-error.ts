@@ -1,4 +1,5 @@
 import axios from "axios";
+import { resolveAdminApiBaseUrl } from "@/config/env";
 
 export function getApiErrorMessage(error: unknown, fallback: string): string {
   if (axios.isAxiosError(error)) {
@@ -7,10 +8,10 @@ export function getApiErrorMessage(error: unknown, fallback: string): string {
       return message;
     }
     if (error.response?.status === 404) {
-      return "API route not found. Restart the admin API server (npm run dev in affecio-admin-api).";
+      return `API route not found at ${resolveAdminApiBaseUrl()}. Check NEXT_PUBLIC_ADMIN_API_URL and redeploy the admin API.`;
     }
     if (error.code === "ERR_NETWORK") {
-      return "Cannot reach the admin API. Ensure it is running on port 4001.";
+      return `Cannot reach the admin API at ${resolveAdminApiBaseUrl()}. Check that the server is up and CORS allows this app.`;
     }
   }
   if (error instanceof Error && error.message) {

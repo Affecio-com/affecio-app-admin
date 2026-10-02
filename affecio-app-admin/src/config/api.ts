@@ -1,12 +1,10 @@
 import axios, { type AxiosInstance } from "axios";
-import { env } from "@/config/env";
+import { resolveAdminApiBaseUrl } from "@/config/env";
 import { getStoredToken } from "@/lib/auth-storage";
-
-export const ADMIN_API_BASE_URL = env.apiUrl;
 
 export function createAdminApiClient(prefix = ""): AxiosInstance {
   const client = axios.create({
-    baseURL: `${ADMIN_API_BASE_URL}${prefix}`,
+    baseURL: `${resolveAdminApiBaseUrl()}${prefix}`,
     headers: { "Content-Type": "application/json" },
     withCredentials: true,
   });

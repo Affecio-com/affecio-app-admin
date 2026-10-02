@@ -68,7 +68,7 @@ export default function DashboardPage() {
 
       {metricsQuery.isError ? (
         <div className="mb-6">
-          <ApiErrorMessage message="Could not load metrics. Ensure the API is running on port 4001." />
+          <ApiErrorMessage message="Could not load metrics. Check that the admin API is reachable." />
         </div>
       ) : (
         <div className="mb-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">

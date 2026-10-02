@@ -24,6 +24,26 @@ npm run dev   # http://localhost:4001
 npm run dev   # http://localhost:3000
 ```
 
+## Deploy on Vercel (multi-service)
+
+Root `vercel.json` deploys two services in one project:
+
+| Service | Role | Public path |
+|---------|------|-------------|
+| **app** | Next.js admin UI | `/` |
+| **affecio-admin-api** | Express + Prisma | `/api/*` |
+
+**Binding:** `app` → `affecio-admin-api` injects `ADMIN_API_URL` (server-side). The browser calls **same-origin** `/api/...`; do not set `NEXT_PUBLIC_ADMIN_API_URL` on Vercel production.
+
+**Environment variables (Vercel dashboard → affecio-admin-api service):** `DATABASE_URL`, `ADMIN_JWT_SECRET`, `ADMIN_REFRESH_SECRET`, R2 keys, optional `REDIS_URL`, `FCM_SERVER_KEY`, `SENTRY_DSN`. Use strong secrets in production.
+
+**Local options**
+
+| Mode | Frontend | API URL |
+|------|----------|---------|
+| Split (default) | `npm run dev` in repo root | `.env.local` → `http://localhost:4001/api` |
+| Unified local | `vercel dev` at repo root | unset `NEXT_PUBLIC_ADMIN_API_URL` (uses `/api`) |
+
 ## Design system
 
 Affecio mobile tokens mapped to Tailwind:

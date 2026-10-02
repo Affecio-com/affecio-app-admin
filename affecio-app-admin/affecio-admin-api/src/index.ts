@@ -16,8 +16,30 @@ app.use(
     crossOriginResourcePolicy: { policy: "cross-origin" },
   }),
 );
+function parseCorsOrigins(): string[] {
+  const raw = process.env.CORS_ORIGIN ?? "http://localhost:3000";
+  const origins = raw
+    .split(",")
+    .map((o) => o.trim())
+    .filter(Boolean);
+
+  for (const host of [process.env.VERCEL_URL, process.env.VERCEL_BRANCH_URL]) {
+    if (host) origins.push(`https://${host.replace(/^https?:\/\//, "")}`);
+  }
+
+  return [...new Set(origins)];
+}
+
+const allowedOrigins = parseCorsOrigins();
+
 const adminCors = cors({
-  origin: process.env.CORS_ORIGIN ?? "http://localhost:3000",
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+    callback(new Error(`CORS blocked for origin: ${origin}`));
+  },
   credentials: true,
   methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
@@ -53,8 +75,15 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
   res.status(500).json({ message: "Internal server error" });
 });
 
-app.listen(PORT, () => {
-  console.log(`Affecio Admin API running on http://localhost:${PORT}`);
-});
+if (process.env.VERCEL !== "1") {
+  app.listen(PORT, () => {
+    const publicUrl = process.env.RENDER_EXTERNAL_URL;
+    console.log(
+      publicUrl
+        ? `Affecio Admin API running at ${publicUrl}/api (CORS: ${allowedOrigins.join(", ")})`
+        : `Affecio Admin API running on http://localhost:${PORT}/api (CORS: ${allowedOrigins.join(", ")})`,
+    );
+  });
+}
 
 export default app;

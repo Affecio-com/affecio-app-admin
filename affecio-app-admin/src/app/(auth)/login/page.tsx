@@ -31,7 +31,7 @@ export default function LoginPage() {
       setError(
         getApiErrorMessage(
           err,
-          "Could not sign in. Check your email and password, and that the API is running on port 4001.",
+          "Could not sign in. Check your email, password, and admin API URL configuration.",
         ),
       );
     } finally {

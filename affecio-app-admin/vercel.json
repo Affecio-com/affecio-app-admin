@@ -1,0 +1,38 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "app": {
+      "root": ".",
+      "framework": "nextjs",
+      "bindings": [
+        {
+          "type": "service",
+          "service": "affecio-admin-api",
+          "format": "url",
+          "env": "ADMIN_API_URL"
+        }
+      ]
+    },
+    "affecio-admin-api": {
+      "root": "affecio-admin-api",
+      "framework": "express",
+      "entrypoint": "dist/index.js",
+      "buildCommand": "npm run build",
+      "installCommand": "npm install"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": {
+        "service": "affecio-admin-api"
+      }
+    },
+    {
+      "source": "/(.*)",
+      "destination": {
+        "service": "app"
+      }
+    }
+  ]
+}
