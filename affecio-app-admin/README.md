@@ -26,6 +26,10 @@ npm run dev   # http://localhost:3000
 
 ## Deploy on Vercel (multi-service)
 
+**Vercel project → Settings → General → Root Directory:** `affecio-app-admin` (this folder in the GitHub repo, not the repo root).
+
+If builds fail with `entrypoint "dist/index.js" does not exist`, the deployment is on an **old commit** or the dashboard overrides Entrypoint — redeploy latest `main` and clear any manual Entrypoint on the `affecio-admin-api` service.
+
 Root `vercel.json` deploys two services in one project:
 
 | Service | Role | Public path |
