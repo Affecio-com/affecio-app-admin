@@ -30,11 +30,18 @@ export function isEmailConfigured(): boolean {
   return Boolean(process.env.SMTP_HOST?.trim());
 }
 
+export type EmailAttachment = {
+  filename: string;
+  path: string;
+  cid?: string;
+};
+
 export async function sendEmail(input: {
   to: string;
   subject: string;
   html: string;
   text: string;
+  attachments?: EmailAttachment[];
 }): Promise<{ sent: boolean; previewUrl?: string; devLog?: string }> {
   const from = process.env.EMAIL_FROM?.trim() ?? "Affecio Admin <no-reply@affecio.com>";
   const transport = getTransporter();
@@ -51,6 +58,7 @@ export async function sendEmail(input: {
     subject: input.subject,
     html: input.html,
     text: input.text,
+    attachments: input.attachments,
   });
 
   const preview = nodemailer.getTestMessageUrl(info);

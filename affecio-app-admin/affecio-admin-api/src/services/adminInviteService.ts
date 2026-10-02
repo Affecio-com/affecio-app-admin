@@ -99,6 +99,7 @@ export async function createAdminInvite(input: {
     subject: mail.subject,
     html: mail.html,
     text: mail.text,
+    attachments: mail.attachments,
   });
 
   return {

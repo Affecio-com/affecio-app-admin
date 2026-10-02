@@ -1,7 +1,7 @@
 import "dotenv/config";
 import fs from "node:fs";
 import path from "node:path";
-import { buildAdminInviteEmail } from "../src/email/adminInviteEmail";
+import { AFFECIO_LOGO_PATH, buildAdminInviteEmail } from "../src/email/adminInviteEmail";
 
 const outDir = path.join(__dirname, "output");
 const outFile = path.join(outDir, "invite-preview.html");
@@ -17,6 +17,7 @@ const mail = buildAdminInviteEmail({
   roleLabel: "admin",
   acceptUrl,
   expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+  logoSrc: path.relative(outDir, AFFECIO_LOGO_PATH).split(path.sep).join("/"),
 });
 
 fs.mkdirSync(outDir, { recursive: true });
