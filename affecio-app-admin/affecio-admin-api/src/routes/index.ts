@@ -15,11 +15,48 @@ import pushNotificationsRoutes from "./pushNotifications";
 import adminUsersRoutes from "./adminUsers";
 import { getPublicStatusSnapshot } from "../services/healthService";
 import { rateLimit } from "../middleware/rateLimit";
+import { prisma } from "../lib/prisma";
 
 const router = Router();
 
-router.get("/health", (_req, res) => {
-  res.json({ status: "ok", service: "affecio-admin-api", uptime: process.uptime(), timestamp: new Date().toISOString() });
+const DB_CHECK_TIMEOUT_MS = 5_000;
+
+async function checkDatabase(): Promise<{ ok: boolean; latencyMs: number; error?: string }> {
+  const started = Date.now();
+  try {
+    await Promise.race([
+      prisma.$queryRaw`SELECT 1`,
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("timeout")), DB_CHECK_TIMEOUT_MS),
+      ),
+    ]);
+    return { ok: true, latencyMs: Date.now() - started };
+  } catch (err) {
+    return {
+      ok: false,
+      latencyMs: Date.now() - started,
+      error: err instanceof Error ? err.message : "unknown",
+    };
+  }
+}
+
+/** Cheapest possible keep-alive — no DB. Use this if you only want to stop Render from sleeping. */
+router.get("/ping", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, timestamp: new Date().toISOString() });
+});
+
+/** Cron / uptime-monitor target. Returns 503 when the database is unreachable. */
+router.get("/health", rateLimit(60, 60_000), async (_req, res) => {
+  const db = await checkDatabase();
+  res.set("Cache-Control", "no-store");
+  res.status(db.ok ? 200 : 503).json({
+    status: db.ok ? "ok" : "degraded",
+    service: "affecio-admin-api",
+    uptime: Math.round(process.uptime()),
+    timestamp: new Date().toISOString(),
+    checks: { database: db },
+  });
 });
 
 router.get("/status", rateLimit(120, 60_000), async (_req, res) => {
