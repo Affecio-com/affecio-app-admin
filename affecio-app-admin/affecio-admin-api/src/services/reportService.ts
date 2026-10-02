@@ -49,6 +49,8 @@ export async function getReportById(id: string) {
 }
 
 export async function updateReport(id: string, input: UpdateReportInput) {
+  const existing = await prisma.report.findUnique({ where: { id }, select: { id: true } });
+  if (!existing) return null;
   const report = await prisma.report.update({
     where: { id },
     data: { status: input.status },

@@ -229,6 +229,9 @@ export async function updateTicket(
   if (input.priority) data.priority = input.priority;
   if (input.assignedToId !== undefined) data.assignedToId = input.assignedToId;
 
+  const existing = await prisma.supportTicket.findUnique({ where: { id }, select: { id: true } });
+  if (!existing) return null;
+
   await prisma.supportTicket.update({ where: { id }, data });
 
   if (input.status) {
@@ -263,13 +266,12 @@ export async function addMessage(input: {
     },
   });
 
+  const isActive = ticket.status !== "resolved" && ticket.status !== "closed";
   const nextStatus =
-    input.authorType === "agent"
-      ? ticket.status === "waiting_on_user" || ticket.status === "open"
+    input.authorType === "agent" && isActive
+      ? "waiting_on_user"
+      : input.authorType === "user" && ticket.status === "waiting_on_user"
         ? "in_progress"
-        : ticket.status
-      : input.authorType === "user"
-        ? "waiting_on_user"
         : ticket.status;
 
   if (nextStatus !== ticket.status) {

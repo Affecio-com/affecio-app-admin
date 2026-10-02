@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { PaginatedResponse } from "@/types/api";
 
 interface UsePaginatedQueryOptions<T> {
-  queryKey: string;
+  queryKey: readonly unknown[];
   fetcher: (params: { page: number; pageSize: number; search?: string }) => Promise<PaginatedResponse<T>>;
   page?: number;
   pageSize?: number;
@@ -21,7 +21,7 @@ export function usePaginatedQuery<T>({
   enabled = true,
 }: UsePaginatedQueryOptions<T>) {
   return useQuery({
-    queryKey: [queryKey, page, pageSize, search],
+    queryKey: [...queryKey, page, pageSize, search],
     queryFn: () => fetcher({ page, pageSize, search }),
     enabled,
   });

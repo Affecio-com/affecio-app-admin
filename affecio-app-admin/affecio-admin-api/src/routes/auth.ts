@@ -9,7 +9,13 @@ import {
   updateProfileSchema,
 } from "../schemas/auth";
 import { prisma } from "../lib/prisma";
-import { signAdminToken, signRefreshToken, verifyRefreshToken } from "../lib/jwt";
+import {
+  signAdminToken,
+  signMfaChallengeToken,
+  signRefreshToken,
+  verifyMfaChallengeToken,
+  verifyRefreshToken,
+} from "../lib/jwt";
 import { hashPassword, verifyPassword, verifyPasswordOrDummy } from "../lib/password";
 import { buildOtpAuthUrl, generateMfaSecret, verifyMfaCode } from "../lib/mfa";
 import { requireAdminAuth } from "../middleware/requireAdminAuth";
@@ -77,7 +83,8 @@ router.post("/login", rateLimit(8, 60_000), async (req, res) => {
     return;
   }
 
-  const admin = await prisma.adminUser.findUnique({ where: { email: parsed.data.email } });
+  const found = await prisma.adminUser.findUnique({ where: { email: parsed.data.email } });
+  const admin = found?.disabledAt ? null : found;
   if (admin?.lockedUntil && admin.lockedUntil > new Date()) {
     res.status(423).json({ message: "Account locked. Try again later." });
     return;
@@ -99,7 +106,7 @@ router.post("/login", rateLimit(8, 60_000), async (req, res) => {
   }
 
   if (admin.mfaEnabled) {
-    res.json({ data: { requiresMfa: true, adminId: admin.id } });
+    res.json({ data: { requiresMfa: true, mfaToken: signMfaChallengeToken(admin.id, admin.tokenVersion) } });
     return;
   }
 
@@ -124,7 +131,7 @@ router.post("/login", rateLimit(8, 60_000), async (req, res) => {
 });
 
 router.post("/refresh", rateLimit(30, 60_000), async (req, res) => {
-  const refreshToken = z.string().optional().parse(req.body.refreshToken);
+  const refreshToken = typeof req.body?.refreshToken === "string" ? req.body.refreshToken : "";
   if (!refreshToken) {
     res.status(400).json({ message: "Refresh token required" });
     return;
@@ -133,7 +140,7 @@ router.post("/refresh", rateLimit(30, 60_000), async (req, res) => {
   try {
     const payload = verifyRefreshToken(refreshToken);
     const admin = await prisma.adminUser.findUnique({ where: { id: payload.sub } });
-    if (!admin || admin.tokenVersion !== payload.tv) {
+    if (!admin || admin.disabledAt || admin.tokenVersion !== payload.tv) {
       res.status(401).json({ message: "Invalid refresh token" });
       return;
     }
@@ -405,15 +412,18 @@ router.post("/mfa", rateLimit(10, 60_000), async (req, res) => {
     return;
   }
 
-  const adminId = z.string().optional().parse(req.body.adminId);
-  if (!adminId) {
-    res.status(400).json({ message: "Admin ID required" });
+  const mfaToken = typeof req.body?.mfaToken === "string" ? req.body.mfaToken : "";
+  let challenge: { sub: string; tv: number };
+  try {
+    challenge = verifyMfaChallengeToken(mfaToken);
+  } catch {
+    res.status(401).json({ message: "MFA session expired. Sign in again." });
     return;
   }
 
-  const admin = await prisma.adminUser.findUnique({ where: { id: adminId } });
-  if (!admin) {
-    res.status(401).json({ message: "MFA not configured" });
+  const admin = await prisma.adminUser.findUnique({ where: { id: challenge.sub } });
+  if (!admin || admin.disabledAt || admin.tokenVersion !== challenge.tv) {
+    res.status(401).json({ message: "MFA session expired. Sign in again." });
     return;
   }
   if (admin.lockedUntil && admin.lockedUntil > new Date()) {

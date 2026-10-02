@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
+import { use } from "react";
 import { AffecioCard } from "@/components/affecio/AffecioCard";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { ReportActionBar } from "@/components/reports/ReportActionBar";
@@ -16,8 +17,8 @@ import { RoleGate } from "@/components/layout/RoleGate";
 import { useAuth } from "@/providers/AuthProvider";
 import { hasRole, trustReadRoles, trustWriteRoles } from "@/config/access";
 
-export default function ReportDetailPage({ params }: { params: { id: string } }) {
-  const { id } = params;
+export default function ReportDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const queryClient = useQueryClient();
   const { admin } = useAuth();
   const canWrite = hasRole(admin?.role, trustWriteRoles);

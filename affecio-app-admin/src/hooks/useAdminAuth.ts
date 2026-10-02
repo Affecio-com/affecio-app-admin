@@ -25,6 +25,8 @@ export function useAdminAuth(): UseAdminAuthReturn {
   useEffect(() => {
     const token = getStoredToken();
     if (!token) {
+      // A leftover session cookie without a token would make the proxy bounce /login back to /.
+      clearStoredToken();
       setIsLoading(false);
       return;
     }
@@ -67,7 +69,7 @@ export function useAdminAuth(): UseAdminAuthReturn {
     async (email: string, password: string): Promise<"mfa" | "success"> => {
       const result = await adminAuthService.login(email, password);
       if ("requiresMfa" in result && result.requiresMfa) {
-        sessionStorage.setItem("affecio_mfa_admin_id", result.adminId);
+        sessionStorage.setItem("affecio_mfa_token", result.mfaToken);
         sessionStorage.setItem("affecio_mfa_admin_email", email);
         router.push("/mfa");
         return "mfa";

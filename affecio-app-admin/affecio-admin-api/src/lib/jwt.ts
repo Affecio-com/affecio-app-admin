@@ -21,7 +21,24 @@ export function signAdminToken(payload: AdminTokenPayload): string {
 }
 
 export function verifyAdminToken(token: string): AdminTokenPayload {
-  return jwt.verify(token, JWT_SECRET) as AdminTokenPayload;
+  const payload = jwt.verify(token, JWT_SECRET) as AdminTokenPayload & { type?: string };
+  // Refresh and MFA-challenge tokens may share this secret; they must never authenticate requests.
+  if (payload.type) {
+    throw new Error("Invalid access token");
+  }
+  return payload;
+}
+
+export function signMfaChallengeToken(adminId: string, tokenVersion: number): string {
+  return jwt.sign({ sub: adminId, type: "mfa", tv: tokenVersion }, JWT_SECRET, { expiresIn: "5m" });
+}
+
+export function verifyMfaChallengeToken(token: string): { sub: string; tv: number } {
+  const payload = jwt.verify(token, JWT_SECRET) as { sub: string; type?: string; tv?: number };
+  if (payload.type !== "mfa") {
+    throw new Error("Invalid MFA challenge");
+  }
+  return { sub: payload.sub, tv: payload.tv ?? 0 };
 }
 
 export function signRefreshToken(adminId: string, tokenVersion: number): string {

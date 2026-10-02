@@ -2,7 +2,7 @@ import { apiClient } from "@/config/api";
 import type { AdminSession, AdminUser } from "@/types/admin";
 import type { ApiResponse } from "@/types/api";
 
-export type LoginResult = AdminSession | { requiresMfa: true; adminId: string };
+export type LoginResult = AdminSession | { requiresMfa: true; mfaToken: string };
 
 export interface MfaStatus {
   enabled: boolean;
@@ -36,10 +36,10 @@ export async function changePassword(currentPassword: string, newPassword: strin
   await apiClient.post("/admin/auth/change-password", { currentPassword, newPassword });
 }
 
-export async function verifyMfa(code: string, adminId: string): Promise<AdminSession> {
+export async function verifyMfa(code: string, mfaToken: string): Promise<AdminSession> {
   const { data } = await apiClient.post<ApiResponse<AdminSession>>("/admin/auth/mfa", {
     code,
-    adminId,
+    mfaToken,
   });
   return data.data;
 }

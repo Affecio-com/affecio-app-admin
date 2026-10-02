@@ -18,10 +18,10 @@ export function requireAdminAuth(req: Request, res: Response, next: NextFunction
       const payload = verifyAdminToken(token);
       const admin = await prisma.adminUser.findUnique({
         where: { id: payload.sub },
-        select: { id: true, email: true, role: true, tokenVersion: true, lockedUntil: true },
+        select: { id: true, email: true, role: true, tokenVersion: true, lockedUntil: true, disabledAt: true },
       });
 
-      if (!admin) {
+      if (!admin || admin.disabledAt) {
         res.status(401).json({ message: "Invalid or expired token" });
         return;
       }

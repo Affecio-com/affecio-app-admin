@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import QRCode from "qrcode";
 import { AffecioButton } from "@/components/affecio/AffecioButton";
 import { Input } from "@/components/ui/input";
 import { SettingsSection } from "@/components/settings/SettingsSections";
@@ -93,9 +94,18 @@ export function MfaSettingsPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pending, enabled]);
 
-  const qrUrl = setupData
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(setupData.otpauthUrl)}`
-    : null;
+  const [qr, setQr] = useState<{ source: string; dataUrl: string } | null>(null);
+  useEffect(() => {
+    if (!setupData) return undefined;
+    let cancelled = false;
+    void QRCode.toDataURL(setupData.otpauthUrl, { width: 180, margin: 1 }).then((dataUrl) => {
+      if (!cancelled) setQr({ source: setupData.otpauthUrl, dataUrl });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [setupData]);
+  const qrUrl = setupData && qr?.source === setupData.otpauthUrl ? qr.dataUrl : null;
 
   return (
     <SettingsSection

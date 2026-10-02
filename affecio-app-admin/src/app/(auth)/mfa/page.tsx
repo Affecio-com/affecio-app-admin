@@ -8,6 +8,7 @@ import { AuthShell } from "@/components/auth/AuthShell";
 import { Input } from "@/components/ui/input";
 import * as adminAuthService from "@/services/adminAuth";
 import { useAuth } from "@/providers/AuthProvider";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 export default function MfaPage() {
   const router = useRouter();
@@ -18,8 +19,8 @@ export default function MfaPage() {
   const [adminEmail, setAdminEmail] = useState<string | null>(null);
 
   useEffect(() => {
-    const adminId = sessionStorage.getItem("affecio_mfa_admin_id");
-    if (!adminId) {
+    const mfaToken = sessionStorage.getItem("affecio_mfa_token");
+    if (!mfaToken) {
       router.replace("/login");
       return;
     }
@@ -29,20 +30,22 @@ export default function MfaPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    const adminId = sessionStorage.getItem("affecio_mfa_admin_id");
-    if (!adminId) {
+    const mfaToken = sessionStorage.getItem("affecio_mfa_token");
+    if (!mfaToken) {
       router.replace("/login");
       return;
     }
     setIsLoading(true);
     try {
-      const session = await adminAuthService.verifyMfa(code, adminId);
-      sessionStorage.removeItem("affecio_mfa_admin_id");
+      const session = await adminAuthService.verifyMfa(code, mfaToken);
+      sessionStorage.removeItem("affecio_mfa_token");
       sessionStorage.removeItem("affecio_mfa_admin_email");
       setSession(session);
       router.push("/");
-    } catch {
-      setError("Invalid verification code. Try the latest code from your authenticator app.");
+    } catch (err) {
+      setError(
+        getApiErrorMessage(err, "Invalid verification code. Try the latest code from your authenticator app."),
+      );
     } finally {
       setIsLoading(false);
     }

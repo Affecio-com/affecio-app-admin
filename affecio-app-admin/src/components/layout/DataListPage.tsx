@@ -56,7 +56,7 @@ export function DataListPage<T extends { id: string }>({
   const status = useMemo(() => statusFromTab?.(activeTab), [activeTab, statusFromTab]);
 
   const { data, isLoading, isError, error } = usePaginatedQuery({
-    queryKey: `${queryKey}-${status ?? "all"}-${debouncedSearch}`,
+    queryKey: [queryKey, status ?? "all", debouncedSearch],
     fetcher: (params) => fetcher({ ...params, search: debouncedSearch || undefined, status }),
     page,
     pageSize,

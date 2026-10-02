@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
+import { use } from "react";
 import { AffecioButton } from "@/components/affecio/AffecioButton";
 import { AffecioCard } from "@/components/affecio/AffecioCard";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -16,8 +17,8 @@ import { RoleGate } from "@/components/layout/RoleGate";
 import { useAuth } from "@/providers/AuthProvider";
 import { hasRole, trustReadRoles, trustWriteRoles } from "@/config/access";
 
-export default function VerificationReviewPage({ params }: { params: { mediaId: string } }) {
-  const { mediaId } = params;
+export default function VerificationReviewPage({ params }: { params: Promise<{ mediaId: string }> }) {
+  const { mediaId } = use(params);
   const queryClient = useQueryClient();
   const { admin } = useAuth();
   const canReview = hasRole(admin?.role, trustWriteRoles);

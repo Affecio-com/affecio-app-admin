@@ -1,5 +1,5 @@
 import path from "node:path";
-import type { EmailAttachment } from "./sendEmail";
+import { getEmailProvider, type EmailAttachment } from "./sendEmail";
 
 export type AdminInviteEmailParams = {
   inviteeName: string;
@@ -44,7 +44,10 @@ export function buildAdminInviteEmail(params: AdminInviteEmailParams): {
   const acceptUrl = params.acceptUrl;
   const expires = params.expiresAt.toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });
 
-  const hostedLogoUrl = process.env.EMAIL_LOGO_URL?.trim();
+  const portalUrl = (process.env.ADMIN_PORTAL_URL ?? "").trim().replace(/\/$/, "");
+  const hostedLogoUrl =
+    process.env.EMAIL_LOGO_URL?.trim() ||
+    (getEmailProvider() === "brevo" && portalUrl ? `${portalUrl}/icon.png` : undefined);
   const logoSrc = params.logoSrc ?? hostedLogoUrl ?? `cid:${LOGO_CID}`;
   const attachments: EmailAttachment[] =
     logoSrc === `cid:${LOGO_CID}`

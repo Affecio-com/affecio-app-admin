@@ -16,7 +16,7 @@ export function proxy(request: NextRequest) {
   const isAuthRoute = AUTH_PATHS.some((path) => pathname.startsWith(path));
 
   if (isAuthRoute) {
-    if (hasSession) {
+    if (hasSession && !pathname.startsWith("/invite")) {
       return withClearedStaleJwt(NextResponse.redirect(new URL("/", request.url)));
     }
     return withClearedStaleJwt(NextResponse.next());

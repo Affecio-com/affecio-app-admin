@@ -49,12 +49,14 @@ export async function reviewVerification(
   status: "approved" | "rejected",
   adminId: string,
 ) {
-  return prisma.verification.update({
-    where: { id },
+  const result = await prisma.verification.updateMany({
+    where: { id, status: "pending" },
     data: {
       status,
       reviewedAt: new Date(),
       reviewedBy: adminId,
     },
   });
+  if (result.count === 0) return null;
+  return prisma.verification.findUnique({ where: { id } });
 }

@@ -36,6 +36,7 @@ export interface InviteAdminResult {
   expiresAt: string;
   createdAt: string;
   emailSent: boolean;
+  emailError?: string;
   acceptUrl?: string;
 }
 
@@ -63,6 +64,19 @@ export async function inviteAdminUser(input: InviteAdminInput): Promise<InviteAd
     input,
   );
   return data.data;
+}
+
+export async function resendAdminInvite(inviteId: string): Promise<InviteAdminResult> {
+  const { data } = await adminV1Client.post<{ data: InviteAdminResult }>(`/admin-users/invites/${inviteId}/resend`);
+  return data.data;
+}
+
+export async function revokeAdminInvite(inviteId: string): Promise<void> {
+  await adminV1Client.delete(`/admin-users/invites/${inviteId}`);
+}
+
+export async function removeAdminUser(adminId: string): Promise<void> {
+  await adminV1Client.delete(`/admin-users/${adminId}`);
 }
 
 export async function getAdminInvite(token: string): Promise<InvitePreview> {
