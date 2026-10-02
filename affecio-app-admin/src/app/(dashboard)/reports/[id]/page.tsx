@@ -9,6 +9,7 @@ import { StatusPill, reportStatusTone } from "@/components/shared/StatusPill";
 import { TableSkeleton } from "@/components/shared/LoadingSkeleton";
 import { ApiErrorMessage } from "@/components/shared/ApiErrorMessage";
 import { formatDateTime } from "@/lib/format";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { getReport, updateReportStatus } from "@/services/reports";
 import { AppUserCell } from "@/components/users/AppUserCell";
 import { RoleGate } from "@/components/layout/RoleGate";
@@ -56,7 +57,7 @@ export default function ReportDetailPage({ params }: { params: { id: string } })
         </AffecioCard>
       ) : isError ? (
         <AffecioCard>
-          <ApiErrorMessage message={error instanceof Error ? error.message : "Failed to load report"} />
+          <ApiErrorMessage message={getApiErrorMessage(error, "Failed to load report")} />
         </AffecioCard>
       ) : data ? (
         <AffecioCard>

@@ -21,6 +21,9 @@ function getTransporter(): nodemailer.Transporter | null {
     secure,
     auth: user && pass ? { user, pass } : undefined,
     tls: rejectUnauthorized ? undefined : { rejectUnauthorized: false },
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 20_000,
   });
 
   return transporter;

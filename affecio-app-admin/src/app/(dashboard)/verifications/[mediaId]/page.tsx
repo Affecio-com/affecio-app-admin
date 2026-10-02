@@ -9,6 +9,7 @@ import { StatusPill } from "@/components/shared/StatusPill";
 import { TableSkeleton } from "@/components/shared/LoadingSkeleton";
 import { ApiErrorMessage } from "@/components/shared/ApiErrorMessage";
 import { formatDateTime } from "@/lib/format";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { getVerification, reviewVerification } from "@/services/verifications";
 import { AppUserCell } from "@/components/users/AppUserCell";
 import { RoleGate } from "@/components/layout/RoleGate";
@@ -53,7 +54,7 @@ export default function VerificationReviewPage({ params }: { params: { mediaId: 
         </AffecioCard>
       ) : isError ? (
         <AffecioCard>
-          <ApiErrorMessage message={error instanceof Error ? error.message : "Failed to load verification"} />
+          <ApiErrorMessage message={getApiErrorMessage(error, "Failed to load verification")} />
         </AffecioCard>
       ) : data ? (
         <div className="grid gap-6 lg:grid-cols-2">

@@ -80,7 +80,7 @@ router.post(
         },
         message: result.emailSent
           ? "Invitation email sent."
-          : "Invitation created. Email is not configured — use the accept link from server logs (dev).",
+          : "Invitation created, but the email could not be sent. Share the invite link manually.",
       });
     } catch (err) {
       const code = err instanceof Error ? err.message : "";

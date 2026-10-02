@@ -94,19 +94,28 @@ export async function createAdminInvite(input: {
     expiresAt: invite.expiresAt,
   });
 
-  const emailResult = await sendEmail({
-    to: invite.email,
-    subject: mail.subject,
-    html: mail.html,
-    text: mail.text,
-    attachments: mail.attachments,
-  });
+  let emailSent = false;
+  let emailPreviewUrl: string | undefined;
+  try {
+    const emailResult = await sendEmail({
+      to: invite.email,
+      subject: mail.subject,
+      html: mail.html,
+      text: mail.text,
+      attachments: mail.attachments,
+    });
+    emailSent = emailResult.sent;
+    emailPreviewUrl = emailResult.previewUrl;
+  } catch (err) {
+    console.error(`Invite email to ${invite.email} failed:`, err);
+  }
 
   return {
     invite,
-    acceptUrl: process.env.NODE_ENV === "production" ? undefined : acceptUrl,
-    emailSent: emailResult.sent,
-    emailPreviewUrl: emailResult.previewUrl,
+    // Only super_admins can call this; they need the link to share manually when email fails.
+    acceptUrl: emailSent ? undefined : acceptUrl,
+    emailSent,
+    emailPreviewUrl,
   };
 }
 

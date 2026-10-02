@@ -76,7 +76,7 @@ export default function ServiceHealthPage() {
         ) : isError ? (
           <AffecioCard>
             <ApiErrorMessage
-              message={error instanceof Error ? error.message : "Failed to load service health."}
+              message={getApiErrorMessage(error, "Failed to load service health.")}
             />
           </AffecioCard>
         ) : data ? (

@@ -41,6 +41,8 @@ function AdminUsersContent() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formError, setFormError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [manualLink, setManualLink] = useState("");
+  const [copied, setCopied] = useState(false);
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -59,12 +61,15 @@ function AdminUsersContent() {
       setDialogOpen(false);
       setForm({ name: "", email: "", role: "admin" });
       setFormError("");
+      setCopied(false);
       if (result.emailSent) {
+        setManualLink("");
         setSuccessMessage(`Invitation sent to ${result.email}.`);
-      } else if (result.acceptUrl) {
-        setSuccessMessage(`Email not configured. Dev accept link: ${result.acceptUrl}`);
       } else {
-        setSuccessMessage(`Invitation created for ${result.email}.`);
+        setManualLink(result.acceptUrl ?? "");
+        setSuccessMessage(
+          `Invitation created for ${result.email}, but the email could not be sent. Share this link with them:`,
+        );
       }
     },
     onError: (err) =>
@@ -89,7 +94,20 @@ function AdminUsersContent() {
 
       {successMessage ? (
         <div className="mb-4 rounded-lg border border-affecio-border bg-affecio-surface px-4 py-3 text-sm text-affecio-text">
-          {successMessage}
+          <p>{successMessage}</p>
+          {manualLink ? (
+            <div className="mt-2 flex items-center gap-2">
+              <Input readOnly value={manualLink} onFocus={(e) => e.currentTarget.select()} />
+              <AffecioButton
+                variant="secondary"
+                onClick={() => {
+                  void navigator.clipboard.writeText(manualLink).then(() => setCopied(true));
+                }}
+              >
+                {copied ? "Copied" : "Copy"}
+              </AffecioButton>
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -100,7 +118,7 @@ function AdminUsersContent() {
           </div>
         ) : isError ? (
           <div className="p-5">
-            <ApiErrorMessage message={error instanceof Error ? error.message : "Failed to load admins"} />
+            <ApiErrorMessage message={getApiErrorMessage(error, "Failed to load admins")} />
           </div>
         ) : !admins.length && !pending.length ? (
           <EmptyState title="No admins" description="Run db:seed or invite the first admin." />

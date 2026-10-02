@@ -9,6 +9,7 @@ import { TableSkeleton } from "@/components/shared/LoadingSkeleton";
 import { useDebounce } from "@/hooks/useDebounce";
 import { usePaginatedQuery } from "@/hooks/usePaginatedQuery";
 import { ApiErrorMessage } from "@/components/shared/ApiErrorMessage";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type { PaginatedResponse } from "@/types/api";
 
 interface DataListPageProps<T extends { id: string }> {
@@ -90,7 +91,7 @@ export function DataListPage<T extends { id: string }>({
         ) : isError ? (
           <div className="p-5">
             <ApiErrorMessage
-              message={error instanceof Error ? error.message : "Failed to load data. Is the API running?"}
+              message={getApiErrorMessage(error, "Failed to load data. Is the API running?")}
             />
           </div>
         ) : !data?.data.length ? (

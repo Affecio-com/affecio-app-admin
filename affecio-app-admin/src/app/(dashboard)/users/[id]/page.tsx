@@ -12,6 +12,7 @@ import { UserSupportTickets } from "@/components/support/UserSupportTickets";
 import { TableSkeleton } from "@/components/shared/LoadingSkeleton";
 import { ApiErrorMessage } from "@/components/shared/ApiErrorMessage";
 import { formatDate } from "@/lib/format";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { getUser } from "@/services/users";
 import { RoleGate } from "@/components/layout/RoleGate";
 import { userLookupRoles } from "@/config/access";
@@ -61,7 +62,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
         </AffecioCard>
       ) : isError ? (
         <AffecioCard>
-          <ApiErrorMessage message={error instanceof Error ? error.message : "Failed to load user"} />
+          <ApiErrorMessage message={getApiErrorMessage(error, "Failed to load user")} />
         </AffecioCard>
       ) : user ? (
         <div className="space-y-6">
