@@ -21,6 +21,11 @@ export type EmailProvider = "resend" | "brevo" | "smtp" | "none";
 
 let transporter: nodemailer.Transporter | null = null;
 
+/** Strips quotes and invisible characters that sneak in when pasting into hosting dashboards. */
+function cleanEnv(value: string | undefined): string {
+  return (value ?? "").replace(/[\u0000-\u0020\u007f-\u00a0\u200b-\u200f\u2028\u2029\ufeff"']/g, "");
+}
+
 /** Resend/Brevo use HTTPS, which works on hosts that block outbound SMTP (e.g. Render free tier). */
 export function getEmailProvider(): EmailProvider {
   if (process.env.RESEND_API_KEY?.trim()) return "resend";
@@ -43,14 +48,14 @@ function fromAddress(): { raw: string; name?: string; email: string } {
 function getTransporter(): nodemailer.Transporter {
   if (transporter) return transporter;
 
-  const port = Number(process.env.SMTP_PORT ?? 587);
-  const secure = process.env.SMTP_SECURE === "true" || port === 465;
-  const user = process.env.SMTP_USER?.trim();
+  const port = Number(cleanEnv(process.env.SMTP_PORT) || 587);
+  const secure = cleanEnv(process.env.SMTP_SECURE) === "true" || port === 465;
+  const user = cleanEnv(process.env.SMTP_USER);
   const pass = process.env.SMTP_PASS;
-  const rejectUnauthorized = process.env.SMTP_TLS_REJECT_UNAUTHORIZED !== "false";
+  const rejectUnauthorized = cleanEnv(process.env.SMTP_TLS_REJECT_UNAUTHORIZED) !== "false";
 
   transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST!.trim(),
+    host: cleanEnv(process.env.SMTP_HOST),
     port,
     secure,
     auth: user && pass ? { user, pass } : undefined,
@@ -124,14 +129,23 @@ export async function sendEmail(input: EmailInput): Promise<SendResult> {
   }
 
   if (provider === "smtp") {
-    const info = await getTransporter().sendMail({
-      from: from.raw,
-      to: input.to,
-      subject: input.subject,
-      html: input.html,
-      text: input.text,
-      attachments: input.attachments,
-    });
+    const target = `${JSON.stringify(cleanEnv(process.env.SMTP_HOST))}:${cleanEnv(process.env.SMTP_PORT) || 587}`;
+    const info = await getTransporter()
+      .sendMail({
+        from: from.raw,
+        to: input.to,
+        subject: input.subject,
+        html: input.html,
+        text: input.text,
+        attachments: input.attachments,
+      })
+      .catch((err: Error & { code?: string }) => {
+        const hint =
+          err.code === "ETIMEDOUT" || err.code === "ECONNREFUSED" || err.code === "ESOCKET"
+            ? " Outbound SMTP is likely blocked by the host (Render free plan blocks 25/465/587) — set BREVO_API_KEY or RESEND_API_KEY instead."
+            : "";
+        throw new Error(`SMTP ${target} failed: ${err.message}.${hint}`);
+      });
     const preview = nodemailer.getTestMessageUrl(info);
     return { sent: true, provider, previewUrl: typeof preview === "string" ? preview : undefined };
   }
