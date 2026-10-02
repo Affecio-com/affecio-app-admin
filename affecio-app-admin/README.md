@@ -24,29 +24,23 @@ npm run dev   # http://localhost:4001
 npm run dev   # http://localhost:3000
 ```
 
-## Deploy on Vercel (multi-service)
+## Deployment
 
-**Vercel project → Settings → General → Root Directory:** `affecio-app-admin` (this folder in the GitHub repo, not the repo root).
+Frontend on **Vercel**, API on **Render** (`https://affecio-app-admin.onrender.com`).
 
-If builds fail with `entrypoint "dist/index.js" does not exist`, the deployment is on an **old commit** or the dashboard overrides Entrypoint — redeploy latest `main` and clear any manual Entrypoint on the `affecio-admin-api` service.
+**Vercel (Next.js UI)**
 
-Root `vercel.json` deploys two services in one project:
+- Root Directory: `affecio-app-admin`
+- Env: `NEXT_PUBLIC_ADMIN_API_URL=https://affecio-app-admin.onrender.com/api`
+- No backend env vars needed here.
 
-| Service | Role | Public path |
-|---------|------|-------------|
-| **app** | Next.js admin UI | `/` |
-| **affecio-admin-api** | Express + Prisma | `/api/*` |
+**Render (Express API)**
 
-**Binding:** `app` → `affecio-admin-api` injects `ADMIN_API_URL` (server-side). The browser calls **same-origin** `/api/...`; do not set `NEXT_PUBLIC_ADMIN_API_URL` on Vercel production.
+- Root Directory: `affecio-app-admin/affecio-admin-api`
+- Build: `npm install && npm run build` · Start: `npm start` · Health check: `/api/health`
+- Env: `NODE_ENV=production`, `DATABASE_URL`, `ADMIN_JWT_SECRET`, `ADMIN_REFRESH_SECRET`, `CORS_ORIGIN=https://<your-vercel-domain>`, R2 keys, optional `REDIS_URL`, `FCM_SERVER_KEY`, `SENTRY_DSN`.
 
-**Environment variables (Vercel dashboard → affecio-admin-api service):** `DATABASE_URL`, `ADMIN_JWT_SECRET`, `ADMIN_REFRESH_SECRET`, R2 keys, optional `REDIS_URL`, `FCM_SERVER_KEY`, `SENTRY_DSN`. Use strong secrets in production.
-
-**Local options**
-
-| Mode | Frontend | API URL |
-|------|----------|---------|
-| Split (default) | `npm run dev` in repo root | `.env.local` → `http://localhost:4001/api` |
-| Unified local | `vercel dev` at repo root | unset `NEXT_PUBLIC_ADMIN_API_URL` (uses `/api`) |
+Local dev stays split: `npm run dev` here (`.env.local` → `http://localhost:4001/api`) and `npm run dev` in `affecio-admin-api`.
 
 ## Design system
 

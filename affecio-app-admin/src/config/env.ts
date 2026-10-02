@@ -1,4 +1,5 @@
 const LOCAL_ADMIN_API = "http://localhost:4001/api";
+const PRODUCTION_ADMIN_API = "https://affecio-app-admin.onrender.com/api";
 
 function normalizeBaseUrl(url: string): string {
   return url.replace(/\/$/, "");
@@ -14,37 +15,27 @@ function isLocalApiUrl(url: string): boolean {
 
 /**
  * Admin API base URL including the `/api` path segment.
- * Production browser always uses same-origin `/api` unless NEXT_PUBLIC points at a real remote API.
+ * - Local UI (localhost): NEXT_PUBLIC_ADMIN_API_URL or http://localhost:4001/api
+ * - Deployed UI (Vercel): NEXT_PUBLIC_ADMIN_API_URL or the Render API URL.
+ *   A localhost value is ignored on deployed hosts so a stale build can't point at a dev machine.
  */
 export function resolveAdminApiBaseUrl(): string {
   const configured = process.env.NEXT_PUBLIC_ADMIN_API_URL?.trim();
 
-  if (typeof window !== "undefined") {
-    const onLocal = isLocalHost(window.location.hostname);
-    if (onLocal) {
-      return normalizeBaseUrl(configured ?? LOCAL_ADMIN_API);
-    }
-    if (configured && !isLocalApiUrl(configured)) {
-      return normalizeBaseUrl(configured);
-    }
-    return "/api";
-  }
+  const onLocalHost =
+    typeof window !== "undefined"
+      ? isLocalHost(window.location.hostname)
+      : process.env.VERCEL !== "1" && process.env.NODE_ENV !== "production";
 
-  const bound = process.env.ADMIN_API_URL?.trim();
-  if (bound) {
-    const root = normalizeBaseUrl(bound);
-    return root.endsWith("/api") ? root : `${root}/api`;
+  if (onLocalHost) {
+    return normalizeBaseUrl(configured ?? LOCAL_ADMIN_API);
   }
 
   if (configured && !isLocalApiUrl(configured)) {
     return normalizeBaseUrl(configured);
   }
 
-  if (process.env.VERCEL === "1") {
-    return "/api";
-  }
-
-  return normalizeBaseUrl(configured ?? LOCAL_ADMIN_API);
+  return PRODUCTION_ADMIN_API;
 }
 
 export const env = {
