@@ -7,6 +7,7 @@ import { DataListPage } from "@/components/layout/DataListPage";
 import { RoleGate } from "@/components/layout/RoleGate";
 import { AffecioButton } from "@/components/affecio/AffecioButton";
 import { StatusPill } from "@/components/shared/StatusPill";
+import { AdminUserCell } from "@/components/admin/AdminUserCell";
 import { AppUserCell } from "@/components/users/AppUserCell";
 import { Input } from "@/components/ui/input";
 import { formatDateTime } from "@/lib/format";
@@ -84,6 +85,11 @@ export default function EscalationsPage() {
           cell: (e) => <span className="line-clamp-2 text-sm">{e.reason}</span>,
         },
         {
+          key: "raisedBy",
+          header: "Raised by",
+          cell: (e) => <AdminUserCell admin={e.createdBy} />,
+        },
+        {
           key: "status",
           header: "Status",
           cell: (e) => (
@@ -139,7 +145,7 @@ export default function EscalationsPage() {
                 </div>
               </div>
             ) : (
-              <span className="text-xs text-affecio-muted">{e.handledBy?.name ?? e.createdBy.name}</span>
+              <AdminUserCell admin={e.handledBy ?? e.createdBy} />
             ),
         },
       ]}

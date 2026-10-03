@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell, Send, Users } from "lucide-react";
 import { useState } from "react";
+import { AdminUserCell } from "@/components/admin/AdminUserCell";
 import { AffecioButton } from "@/components/affecio/AffecioButton";
 import { AffecioCard } from "@/components/affecio/AffecioCard";
 import { AffecioStatCard } from "@/components/affecio/AffecioStatCard";
@@ -200,7 +201,7 @@ function PushNotificationsContent() {
               {
                 key: "by",
                 header: "Sent by",
-                cell: (c) => c.createdBy.name,
+                cell: (c) => <AdminUserCell admin={c.createdBy} />,
               },
               {
                 key: "when",

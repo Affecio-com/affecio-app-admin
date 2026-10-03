@@ -1,4 +1,5 @@
 import { Router } from "express";
+import express from "express";
 import { z } from "zod";
 import type { AdminRole } from "@prisma/client";
 import {
@@ -7,7 +8,10 @@ import {
   mfaDisableSchema,
   mfaVerifySchema,
   updateProfileSchema,
+  uploadAdminPhotoSchema,
 } from "../schemas/auth";
+import { adminPublicSelect, serializeAdminPublic } from "../lib/adminPhotos";
+import { deleteObject, isR2Configured, putObjectBuffer } from "../lib/r2";
 import { prisma } from "../lib/prisma";
 import {
   signAdminToken,
@@ -23,21 +27,45 @@ import { rateLimit } from "../middleware/rateLimit";
 import { auditAction, writeAuthAudit } from "../middleware/auditAction";
 
 const router = Router();
+const photoBodyParser = express.json({ limit: "7mb" });
 
-function adminPublicSelect() {
-  return {
-    id: true,
-    email: true,
-    name: true,
-    role: true,
-    mfaEnabled: true,
-    lastLoginAt: true,
-    lastActivityAt: true,
-    createdAt: true,
-  } as const;
+const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+
+function extensionForContentType(contentType: string): string {
+  switch (contentType) {
+    case "image/png":
+      return "png";
+    case "image/webp":
+      return "webp";
+    default:
+      return "jpg";
+  }
 }
 
-function sessionResponse(admin: {
+function sniffImageContentType(buffer: Buffer): "image/jpeg" | "image/png" | "image/webp" | null {
+  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+    return "image/jpeg";
+  }
+  if (
+    buffer.length >= 8 &&
+    buffer[0] === 0x89 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x4e &&
+    buffer[3] === 0x47
+  ) {
+    return "image/png";
+  }
+  if (
+    buffer.length >= 12 &&
+    buffer.toString("ascii", 0, 4) === "RIFF" &&
+    buffer.toString("ascii", 8, 12) === "WEBP"
+  ) {
+    return "image/webp";
+  }
+  return null;
+}
+
+async function sessionResponse(admin: {
   id: string;
   email: string;
   name: string;
@@ -46,6 +74,7 @@ function sessionResponse(admin: {
   createdAt: Date;
   lastLoginAt?: Date | null;
   lastActivityAt?: Date | null;
+  photoKey?: string | null;
   tokenVersion?: number;
 }) {
   const tv = admin.tokenVersion ?? 0;
@@ -57,7 +86,7 @@ function sessionResponse(admin: {
   });
   const refreshToken = signRefreshToken(admin.id, tv);
   return {
-    admin: {
+    admin: await serializeAdminPublic({
       id: admin.id,
       email: admin.email,
       name: admin.name,
@@ -66,7 +95,8 @@ function sessionResponse(admin: {
       createdAt: admin.createdAt,
       lastLoginAt: admin.lastLoginAt ?? null,
       lastActivityAt: admin.lastActivityAt ?? null,
-    },
+      photoKey: admin.photoKey ?? null,
+    }),
     accessToken,
     refreshToken,
   };
@@ -121,7 +151,7 @@ router.post("/login", rateLimit(8, 60_000), async (req, res) => {
   });
   await writeAuthAudit({ adminId: admin.id, action: "auth.login.success", req }).catch(() => undefined);
 
-  res.json({ data: sessionResponse({ ...admin, ...updated }) });
+  res.json({ data: await sessionResponse({ ...admin, ...updated }) });
   } catch (err) {
     console.error("login failed:", err);
     if (!res.headersSent) {
@@ -164,7 +194,7 @@ router.post("/refresh", rateLimit(30, 60_000), async (req, res) => {
 router.get("/me", requireAdminAuth, async (req, res) => {
   const admin = await prisma.adminUser.findUnique({
     where: { id: req.admin!.id },
-    select: adminPublicSelect(),
+    select: adminPublicSelect,
   });
 
   if (!admin) {
@@ -172,7 +202,7 @@ router.get("/me", requireAdminAuth, async (req, res) => {
     return;
   }
 
-  res.json({ data: admin });
+  res.json({ data: await serializeAdminPublic(admin) });
 });
 
 router.patch(
@@ -189,10 +219,104 @@ router.patch(
     const admin = await prisma.adminUser.update({
       where: { id: req.admin!.id },
       data: { name: parsed.data.name },
-      select: adminPublicSelect(),
+      select: adminPublicSelect,
     });
 
-    res.json({ data: admin });
+    res.json({ data: await serializeAdminPublic(admin) });
+  },
+);
+
+router.post(
+  "/me/photo",
+  requireAdminAuth,
+  rateLimit(12, 60_000),
+  photoBodyParser,
+  auditAction("admin.profile.photo", "admin", (req) => req.admin!.id),
+  async (req, res) => {
+    if (!isR2Configured()) {
+      res.status(503).json({
+        message: "Photo storage is not configured. Set R2_* variables on the admin API.",
+      });
+      return;
+    }
+
+    const parsed = uploadAdminPhotoSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ message: "Invalid photo payload" });
+      return;
+    }
+
+    let buffer: Buffer;
+    try {
+      buffer = Buffer.from(parsed.data.dataBase64, "base64");
+    } catch {
+      res.status(400).json({ message: "Invalid photo data" });
+      return;
+    }
+
+    if (buffer.length === 0 || buffer.length > MAX_PHOTO_BYTES) {
+      res.status(400).json({ message: "Photo must be under 5 MB" });
+      return;
+    }
+
+    const sniffed = sniffImageContentType(buffer);
+    if (!sniffed || sniffed !== parsed.data.contentType) {
+      res.status(400).json({ message: "File must be a valid JPEG, PNG, or WebP image" });
+      return;
+    }
+
+    const adminId = req.admin!.id;
+    const ext = extensionForContentType(parsed.data.contentType);
+    const photoKey = `admin-portraits/${adminId}/${Date.now()}.${ext}`;
+
+    const existing = await prisma.adminUser.findUnique({
+      where: { id: adminId },
+      select: { photoKey: true },
+    });
+
+    try {
+      await putObjectBuffer(photoKey, buffer, parsed.data.contentType);
+    } catch (err) {
+      console.error("admin photo upload failed:", err);
+      res.status(500).json({ message: "Failed to upload photo" });
+      return;
+    }
+
+    const admin = await prisma.adminUser.update({
+      where: { id: adminId },
+      data: { photoKey },
+      select: adminPublicSelect,
+    });
+
+    if (existing?.photoKey && existing.photoKey !== photoKey) {
+      void deleteObject(existing.photoKey);
+    }
+
+    res.json({ data: await serializeAdminPublic(admin) });
+  },
+);
+
+router.delete(
+  "/me/photo",
+  requireAdminAuth,
+  auditAction("admin.profile.photo.remove", "admin", (req) => req.admin!.id),
+  async (req, res) => {
+    const existing = await prisma.adminUser.findUnique({
+      where: { id: req.admin!.id },
+      select: { photoKey: true },
+    });
+
+    const admin = await prisma.adminUser.update({
+      where: { id: req.admin!.id },
+      data: { photoKey: null },
+      select: adminPublicSelect,
+    });
+
+    if (existing?.photoKey) {
+      void deleteObject(existing.photoKey);
+    }
+
+    res.json({ data: await serializeAdminPublic(admin) });
   },
 );
 
@@ -325,10 +449,10 @@ router.post(
     const updated = await prisma.adminUser.update({
       where: { id: admin.id },
       data: { mfaEnabled: true },
-      select: adminPublicSelect(),
+      select: adminPublicSelect,
     });
 
-    res.json({ data: updated });
+    res.json({ data: await serializeAdminPublic(updated) });
   },
 );
 
@@ -364,10 +488,10 @@ router.post(
     const updated = await prisma.adminUser.update({
       where: { id: admin.id },
       data: { mfaEnabled: false, mfaSecret: null },
-      select: adminPublicSelect(),
+      select: adminPublicSelect,
     });
 
-    res.json({ data: updated });
+    res.json({ data: await serializeAdminPublic(updated) });
   },
 );
 
@@ -459,7 +583,7 @@ router.post("/mfa", rateLimit(10, 60_000), async (req, res) => {
   });
   await writeAuthAudit({ adminId: admin.id, action: "auth.login.success", req }).catch(() => undefined);
 
-  res.json({ data: sessionResponse({ ...admin, ...updated }) });
+  res.json({ data: await sessionResponse({ ...admin, ...updated }) });
 });
 
 export default router;

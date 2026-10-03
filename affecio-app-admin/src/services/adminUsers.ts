@@ -7,6 +7,7 @@ export interface AdminAccount {
   name: string;
   role: AdminRole;
   mfaEnabled: boolean;
+  photoUrl?: string | null;
   lastLoginAt: string | null;
   lastActivityAt?: string | null;
   createdAt: string;
@@ -19,7 +20,7 @@ export interface PendingAdminInvite {
   role: AdminRole;
   expiresAt: string;
   createdAt: string;
-  invitedBy: { id: string; name: string; email: string };
+  invitedBy: { id: string; name: string; email: string; role?: string; photoUrl?: string | null };
 }
 
 export interface InviteAdminInput {

@@ -9,6 +9,7 @@ import { DataListPage } from "@/components/layout/DataListPage";
 import { RoleGate } from "@/components/layout/RoleGate";
 import { CreateTicketDialog } from "@/components/support/CreateTicketDialog";
 import { StatusPill } from "@/components/shared/StatusPill";
+import { AdminUserCell } from "@/components/admin/AdminUserCell";
 import { AppUserCell } from "@/components/users/AppUserCell";
 import { formatDateTime } from "@/lib/format";
 import { getSupportStats, getSupportTickets } from "@/services/support";
@@ -105,6 +106,11 @@ export default function SupportInboxPage() {
             key: "member",
             header: "Member",
             cell: (t) => <AppUserCell user={t.user} fallbackId={t.userId} />,
+          },
+          {
+            key: "assignee",
+            header: "Assignee",
+            cell: (t) => <AdminUserCell admin={t.assignedTo} />,
           },
           {
             key: "subject",

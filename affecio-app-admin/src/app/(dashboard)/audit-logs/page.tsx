@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminUserCell } from "@/components/admin/AdminUserCell";
 import { DataListPage } from "@/components/layout/DataListPage";
 import { formatDateTime } from "@/lib/format";
 import { getAuditLogs } from "@/services/auditLogs";
@@ -23,7 +24,12 @@ export default function AuditLogsPage() {
         {
           key: "admin",
           header: "Admin",
-          cell: (log) => log.admin?.name ?? log.adminId,
+          cell: (log) =>
+            log.admin ? (
+              <AdminUserCell admin={log.admin} />
+            ) : (
+              <span className="font-mono text-xs text-affecio-muted">{log.adminId}</span>
+            ),
         },
         {
           key: "target",

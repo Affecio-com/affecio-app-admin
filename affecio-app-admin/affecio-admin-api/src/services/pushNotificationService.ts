@@ -1,4 +1,5 @@
 import type { PushAudience } from "@prisma/client";
+import { adminRefSelect, serializeAdminRef } from "../lib/adminPhotos";
 import { prisma } from "../lib/prisma";
 
 const FCM_SERVER_KEY = process.env.FCM_SERVER_KEY;
@@ -108,26 +109,28 @@ export async function listPushCampaigns(page = 1, pageSize = 20) {
       take: pageSize,
       orderBy: { createdAt: "desc" },
       include: {
-        createdBy: { select: { id: true, name: true, email: true } },
+        createdBy: { select: adminRefSelect },
       },
     }),
     prisma.pushCampaign.count(),
   ]);
 
   return {
-    data: data.map((c) => ({
-      id: c.id,
-      title: c.title,
-      body: c.body,
-      audience: c.audience,
-      status: c.status,
-      sentCount: c.sentCount,
-      failedCount: c.failedCount,
-      targetCount: c.targetCount,
-      sentAt: c.sentAt?.toISOString() ?? null,
-      createdAt: c.createdAt.toISOString(),
-      createdBy: c.createdBy,
-    })),
+    data: await Promise.all(
+      data.map(async (c) => ({
+        id: c.id,
+        title: c.title,
+        body: c.body,
+        audience: c.audience,
+        status: c.status,
+        sentCount: c.sentCount,
+        failedCount: c.failedCount,
+        targetCount: c.targetCount,
+        sentAt: c.sentAt?.toISOString() ?? null,
+        createdAt: c.createdAt.toISOString(),
+        createdBy: (await serializeAdminRef(c.createdBy))!,
+      })),
+    ),
     total,
     page,
     pageSize,
@@ -165,7 +168,7 @@ export async function createAndSendCampaign(input: {
         failedCount: 0,
         sentAt: new Date(),
       },
-      include: { createdBy: { select: { id: true, name: true, email: true } } },
+      include: { createdBy: { select: adminRefSelect } },
     });
 
     return {
@@ -184,7 +187,7 @@ export async function createAndSendCampaign(input: {
         failedCount: 0,
         sentAt: new Date(),
       },
-      include: { createdBy: { select: { id: true, name: true, email: true } } },
+      include: { createdBy: { select: adminRefSelect } },
     });
 
     return {
@@ -208,7 +211,7 @@ export async function createAndSendCampaign(input: {
       failedCount: failed,
       sentAt: new Date(),
     },
-    include: { createdBy: { select: { id: true, name: true, email: true } } },
+    include: { createdBy: { select: adminRefSelect } },
   });
 
   return {

@@ -10,6 +10,7 @@ import { ApiErrorMessage } from "@/components/shared/ApiErrorMessage";
 import { StatusPill } from "@/components/shared/StatusPill";
 import { formatDateTime, formatRelativeTime } from "@/lib/format";
 import { getSessionStartedAt } from "@/lib/auth-storage";
+import { AdminPhotoUpload } from "@/components/settings/AdminPhotoUpload";
 import { updateProfile } from "@/services/adminAuth";
 import { useAuth } from "@/providers/AuthProvider";
 
@@ -40,6 +41,7 @@ export default function ProfileSettingsPage() {
       <PageHeader title="Profile" description="Your admin account details." action={<SettingsBackLink />} />
 
       <SettingsSection title="Account information">
+        <AdminPhotoUpload admin={admin} />
         {message ? <p className="mb-4 text-sm text-emerald-700 dark:text-emerald-400">{message}</p> : null}
         {error ? (
           <div className="mb-4">

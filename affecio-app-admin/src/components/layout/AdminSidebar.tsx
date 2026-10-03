@@ -3,8 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut } from "lucide-react";
+import { ExternalLink, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { AdminAvatar } from "@/components/admin/AdminAvatar";
 import { getNavGroupsForRole } from "@/config/nav";
 import { useAuth } from "@/providers/AuthProvider";
 
@@ -38,24 +39,38 @@ export function AdminSidebar() {
             </p>
             <ul className="space-y-0.5">
               {group.items.map((item) => {
-                const isActive =
-                  item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+                const isActive = item.external
+                  ? false
+                  : item.href === "/"
+                    ? pathname === "/"
+                    : pathname.startsWith(item.href);
                 const Icon = item.icon;
+                const className = cn(
+                  "flex items-center gap-2.5 rounded-md px-2.5 py-[7px] text-[13px] transition-colors",
+                  isActive
+                    ? "bg-affecio-text font-medium text-affecio-bg"
+                    : "text-affecio-muted hover:bg-affecio-input hover:text-affecio-text",
+                );
 
                 return (
                   <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      className={cn(
-                        "flex items-center gap-2.5 rounded-md px-2.5 py-[7px] text-[13px] transition-colors",
-                        isActive
-                          ? "bg-affecio-text font-medium text-affecio-bg"
-                          : "text-affecio-muted hover:bg-affecio-input hover:text-affecio-text",
-                      )}
-                    >
-                      <Icon className="h-4 w-4 shrink-0 opacity-80" />
-                      {item.label}
-                    </Link>
+                    {item.external ? (
+                      <a
+                        href={item.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={className}
+                      >
+                        <Icon className="h-4 w-4 shrink-0 opacity-80" />
+                        <span className="min-w-0 flex-1">{item.label}</span>
+                        <ExternalLink className="h-3 w-3 shrink-0 opacity-50" />
+                      </a>
+                    ) : (
+                      <Link href={item.href} className={className}>
+                        <Icon className="h-4 w-4 shrink-0 opacity-80" />
+                        {item.label}
+                      </Link>
+                    )}
                   </li>
                 );
               })}
@@ -65,9 +80,12 @@ export function AdminSidebar() {
       </nav>
 
       <div className="border-t border-affecio-border p-3">
-        <div className="mb-2 px-2.5">
-          <p className="truncate text-[13px] font-medium text-affecio-text">{admin?.name}</p>
-          <p className="truncate text-[11px] text-affecio-muted">{admin?.email}</p>
+        <div className="mb-2 flex items-center gap-2.5 px-2.5">
+          <AdminAvatar admin={admin} size="sm" />
+          <div className="min-w-0">
+            <p className="truncate text-[13px] font-medium text-affecio-text">{admin?.name}</p>
+            <p className="truncate text-[11px] text-affecio-muted">{admin?.email}</p>
+          </div>
         </div>
         <button
           type="button"

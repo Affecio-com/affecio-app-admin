@@ -10,6 +10,8 @@ import { RoleGate } from "@/components/layout/RoleGate";
 import { StatusPill } from "@/components/shared/StatusPill";
 import { TableSkeleton } from "@/components/shared/LoadingSkeleton";
 import { ApiErrorMessage } from "@/components/shared/ApiErrorMessage";
+import { AdminAvatar } from "@/components/admin/AdminAvatar";
+import { AdminUserCell } from "@/components/admin/AdminUserCell";
 import { AppUserCell, UserAvatar } from "@/components/users/AppUserCell";
 import { Input } from "@/components/ui/input";
 import { formatDateTime } from "@/lib/format";
@@ -157,14 +159,19 @@ export default function SupportTicketPage({ params }: { params: Promise<{ id: st
                 const isAgent = message.authorType === "agent";
                 const isSystem = message.authorType === "system";
                 const isInternal = message.authorType === "internal";
+                const agentAdmin = message.admin;
+                const memberUser = ticket.user;
                 return (
                   <div
                     key={message.id}
                     className={cn(
-                      "flex",
+                      "flex gap-2",
                       isInternal || isSystem ? "justify-center" : isAgent ? "justify-end" : "justify-start",
                     )}
                   >
+                    {!isSystem && !isInternal && !isAgent ? (
+                      <UserAvatar user={memberUser} size="sm" className="mt-1" />
+                    ) : null}
                     <div
                       className={cn(
                         "max-w-[80%] rounded-2xl px-3 py-2 text-sm",
@@ -176,17 +183,25 @@ export default function SupportTicketPage({ params }: { params: Promise<{ id: st
                       )}
                     >
                       {!isSystem ? (
-                        <p className="mb-1 text-[10px] uppercase tracking-wide opacity-70">
-                          {isInternal
-                            ? `Internal · ${message.admin?.name ?? "Agent"}`
-                            : isAgent
-                              ? message.admin?.name ?? "Agent"
-                              : ticket.user?.name ?? "Member"}
-                        </p>
+                        <div className="mb-1 flex items-center gap-1.5 text-[10px] uppercase tracking-wide opacity-70">
+                          {isInternal || isAgent ? (
+                            <AdminAvatar admin={agentAdmin} size="sm" className="h-5 w-5 text-[9px]" />
+                          ) : null}
+                          <span>
+                            {isInternal
+                              ? `Internal · ${agentAdmin?.name ?? "Agent"}`
+                              : isAgent
+                                ? agentAdmin?.name ?? "Agent"
+                                : memberUser?.name ?? "Member"}
+                          </span>
+                        </div>
                       ) : null}
                       <p className="whitespace-pre-wrap">{message.body}</p>
                       <p className="mt-1 text-[10px] opacity-60">{formatDateTime(message.createdAt)}</p>
                     </div>
+                    {!isSystem && !isInternal && isAgent ? (
+                      <AdminAvatar admin={agentAdmin} size="sm" className="mt-1" />
+                    ) : null}
                   </div>
                 );
               })}
@@ -291,9 +306,11 @@ export default function SupportTicketPage({ params }: { params: Promise<{ id: st
                   <dt className="text-affecio-muted">Category</dt>
                   <dd className="capitalize">{ticket.category}</dd>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex flex-col gap-1">
                   <dt className="text-affecio-muted">Assignee</dt>
-                  <dd>{ticket.assignedTo?.name ?? "Unassigned"}</dd>
+                  <dd>
+                    <AdminUserCell admin={ticket.assignedTo} />
+                  </dd>
                 </div>
                 <div className="flex justify-between">
                   <dt className="text-affecio-muted">SLA</dt>

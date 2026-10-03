@@ -5,6 +5,7 @@ import { generateInviteToken, hashInviteToken } from "../lib/inviteToken";
 import { hashPassword } from "../lib/password";
 import { buildAdminInviteEmail } from "../email/adminInviteEmail";
 import { getEmailProvider, sendEmail } from "../email/sendEmail";
+import { adminRefSelect } from "../lib/adminPhotos";
 
 const INVITE_TTL_MS = (Number(process.env.INVITE_TTL_DAYS ?? 7) || 7) * 24 * 60 * 60 * 1000;
 
@@ -30,7 +31,7 @@ export async function listPendingInvites() {
     where: { acceptedAt: null },
     select: {
       ...inviteSelect,
-      invitedBy: { select: { id: true, name: true, email: true } },
+      invitedBy: { select: adminRefSelect },
     },
     orderBy: { createdAt: "desc" },
   });

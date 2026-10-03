@@ -6,6 +6,7 @@ import { requireRole } from "../middleware/requireRole";
 import { auditAction } from "../middleware/auditAction";
 import { rateLimit } from "../middleware/rateLimit";
 import * as adminInviteService from "../services/adminInviteService";
+import { adminPublicSelect, serializeAdminPublic, serializeAdminRef } from "../lib/adminPhotos";
 
 const router = Router();
 
@@ -43,24 +44,23 @@ router.get("/", async (_req, res) => {
   const [admins, pendingInvites] = await Promise.all([
     prisma.adminUser.findMany({
       where: { disabledAt: null },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        mfaEnabled: true,
-        lastLoginAt: true,
-        lastActivityAt: true,
-        createdAt: true,
-      },
+      select: adminPublicSelect,
       orderBy: { createdAt: "desc" },
     }),
     adminInviteService.listPendingInvites(),
   ]);
 
+  const serializedAdmins = await Promise.all(admins.map((a) => serializeAdminPublic(a)));
+  const serializedInvites = await Promise.all(
+    pendingInvites.map(async (invite) => ({
+      ...serializeInvite(invite),
+      invitedBy: (await serializeAdminRef(invite.invitedBy)) ?? invite.invitedBy,
+    })),
+  );
+
   res.json({
-    data: admins,
-    pendingInvites: pendingInvites.map(serializeInvite),
+    data: serializedAdmins,
+    pendingInvites: serializedInvites,
   });
 });
 

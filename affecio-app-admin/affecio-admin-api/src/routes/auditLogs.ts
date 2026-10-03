@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { adminRefSelect, serializeAdminRef } from "../lib/adminPhotos";
 import { prisma } from "../lib/prisma";
 import { requireAdminAuth } from "../middleware/requireAdminAuth";
 import { requireRole } from "../middleware/requireRole";
@@ -18,14 +19,22 @@ router.get("/", async (req, res) => {
       take: pageSize,
       orderBy: { createdAt: "desc" },
       include: {
-        admin: { select: { id: true, name: true, email: true } },
+        admin: { select: adminRefSelect },
       },
     }),
     prisma.auditLog.count(),
   ]);
 
+  const serialized = await Promise.all(
+    data.map(async (row) => ({
+      ...row,
+      createdAt: row.createdAt.toISOString(),
+      admin: await serializeAdminRef(row.admin),
+    })),
+  );
+
   res.json({
-    data,
+    data: serialized,
     total,
     page,
     pageSize,

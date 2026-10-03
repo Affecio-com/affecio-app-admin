@@ -26,6 +26,7 @@ export interface SupportAdminRef {
   name: string;
   email?: string;
   role: string;
+  photoUrl?: string | null;
 }
 
 export interface SupportMessage {

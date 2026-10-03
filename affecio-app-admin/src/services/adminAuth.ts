@@ -32,6 +32,19 @@ export async function updateProfile(name: string): Promise<AdminUser> {
   return data.data;
 }
 
+export async function uploadAdminPhoto(input: {
+  contentType: string;
+  dataBase64: string;
+}): Promise<AdminUser> {
+  const { data } = await apiClient.post<ApiResponse<AdminUser>>("/admin/auth/me/photo", input);
+  return data.data;
+}
+
+export async function removeAdminPhoto(): Promise<AdminUser> {
+  const { data } = await apiClient.delete<ApiResponse<AdminUser>>("/admin/auth/me/photo");
+  return data.data;
+}
+
 export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
   await apiClient.post("/admin/auth/change-password", { currentPassword, newPassword });
 }

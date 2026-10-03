@@ -12,6 +12,7 @@ export interface AdminUser {
   name: string;
   role: AdminRole;
   mfaEnabled: boolean;
+  photoUrl?: string | null;
   lastLoginAt?: string | null;
   lastActivityAt?: string | null;
   createdAt: string;

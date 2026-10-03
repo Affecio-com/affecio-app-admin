@@ -9,6 +9,7 @@ import {
   Code2,
   Flag,
   Heart,
+  Kanban,
   LayoutDashboard,
   LifeBuoy,
   Phone,
@@ -28,6 +29,8 @@ export interface NavItem {
   roles: AdminRole[];
   icon: LucideIcon;
   section: NavSection;
+  /** Opens in a new browser tab (e.g. Taiga agile board). */
+  external?: boolean;
 }
 
 export const navSectionLabels: Record<NavSection, string> = {
@@ -45,6 +48,14 @@ export const navItems: NavItem[] = [
     roles: ["super_admin", "admin", "moderator", "support", "developer", "marketing"],
     icon: LayoutDashboard,
     section: "main",
+  },
+  {
+    label: "Bug/Kanban/Agile Board",
+    href: "https://tree.taiga.io/login?next=%252Fdiscover",
+    roles: ["super_admin", "admin", "moderator", "support", "developer", "marketing"],
+    icon: Kanban,
+    section: "main",
+    external: true,
   },
   {
     label: "Users",

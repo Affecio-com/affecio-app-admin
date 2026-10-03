@@ -27,6 +27,11 @@ export const updateProfileSchema = z.object({
   name: z.string().min(1).max(100),
 });
 
+export const uploadAdminPhotoSchema = z.object({
+  contentType: z.enum(["image/jpeg", "image/png", "image/webp"]),
+  dataBase64: z.string().min(32).max(7_500_000),
+});
+
 export const changePasswordSchema = z.object({
   currentPassword: z.string().min(8).max(128),
   newPassword: strongPasswordSchema,

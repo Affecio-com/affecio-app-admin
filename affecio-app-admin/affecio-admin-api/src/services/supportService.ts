@@ -6,6 +6,7 @@ import type {
   SupportTicketPriority,
   SupportTicketStatus,
 } from "@prisma/client";
+import { adminRefSelect, serializeAdminRef } from "../lib/adminPhotos";
 import { prisma } from "../lib/prisma";
 import { hydrateUsersByIds } from "../lib/profilePhotos";
 
@@ -30,8 +31,8 @@ function withSla<T extends { priority: SupportTicketPriority; status: SupportTic
 }
 
 const ticketInclude = {
-  assignedTo: { select: { id: true, name: true, email: true, role: true } },
-  createdBy: { select: { id: true, name: true, email: true, role: true } },
+  assignedTo: { select: adminRefSelect },
+  createdBy: { select: adminRefSelect },
 } as const;
 
 async function serializeTickets<T extends { userId: string }>(tickets: T[]) {
@@ -113,20 +114,24 @@ export async function listTickets(input: {
   const data = await serializeTickets(rows);
 
   return {
-    data: data.map((ticket) => ({
-      ...ticket,
-      createdAt: ticket.createdAt.toISOString(),
-      updatedAt: ticket.updatedAt.toISOString(),
-      resolvedAt: ticket.resolvedAt?.toISOString() ?? null,
-      ...withSla(ticket),
-      lastMessage: ticket.messages[0]
-        ? {
-            body: ticket.messages[0].body,
-            authorType: ticket.messages[0].authorType,
-            createdAt: ticket.messages[0].createdAt.toISOString(),
-          }
-        : null,
-    })),
+    data: await Promise.all(
+      data.map(async (ticket) => ({
+        ...ticket,
+        assignedTo: await serializeAdminRef(ticket.assignedTo),
+        createdBy: await serializeAdminRef(ticket.createdBy),
+        createdAt: ticket.createdAt.toISOString(),
+        updatedAt: ticket.updatedAt.toISOString(),
+        resolvedAt: ticket.resolvedAt?.toISOString() ?? null,
+        ...withSla(ticket),
+        lastMessage: ticket.messages[0]
+          ? {
+              body: ticket.messages[0].body,
+              authorType: ticket.messages[0].authorType,
+              createdAt: ticket.messages[0].createdAt.toISOString(),
+            }
+          : null,
+      })),
+    ),
     total,
     page,
     pageSize,
@@ -141,13 +146,13 @@ export async function getTicketById(id: string) {
       ...ticketInclude,
       messages: {
         orderBy: { createdAt: "asc" },
-        include: { admin: { select: { id: true, name: true, role: true } } },
+        include: { admin: { select: adminRefSelect } },
       },
       escalations: {
         orderBy: { createdAt: "desc" },
         include: {
-          createdBy: { select: { id: true, name: true, role: true } },
-          handledBy: { select: { id: true, name: true, role: true } },
+          createdBy: { select: adminRefSelect },
+          handledBy: { select: adminRefSelect },
         },
       },
     },
@@ -157,22 +162,30 @@ export async function getTicketById(id: string) {
   const [serialized] = await serializeTickets([ticket]);
   return {
     ...serialized,
+    assignedTo: await serializeAdminRef(ticket.assignedTo),
+    createdBy: await serializeAdminRef(ticket.createdBy),
     createdAt: ticket.createdAt.toISOString(),
     updatedAt: ticket.updatedAt.toISOString(),
     resolvedAt: ticket.resolvedAt?.toISOString() ?? null,
     ...withSla(ticket),
-    messages: ticket.messages.map((m) => ({
-      id: m.id,
-      authorType: m.authorType,
-      body: m.body,
-      createdAt: m.createdAt.toISOString(),
-      admin: m.admin,
-    })),
-    escalations: ticket.escalations.map((e) => ({
-      ...e,
-      createdAt: e.createdAt.toISOString(),
-      resolvedAt: e.resolvedAt?.toISOString() ?? null,
-    })),
+    messages: await Promise.all(
+      ticket.messages.map(async (m) => ({
+        id: m.id,
+        authorType: m.authorType,
+        body: m.body,
+        createdAt: m.createdAt.toISOString(),
+        admin: await serializeAdminRef(m.admin),
+      })),
+    ),
+    escalations: await Promise.all(
+      ticket.escalations.map(async (e) => ({
+        ...e,
+        createdBy: (await serializeAdminRef(e.createdBy))!,
+        handledBy: await serializeAdminRef(e.handledBy),
+        createdAt: e.createdAt.toISOString(),
+        resolvedAt: e.resolvedAt?.toISOString() ?? null,
+      })),
+    ),
   };
 }
 
@@ -343,8 +356,8 @@ export async function listEscalations(input: {
       take: pageSize,
       orderBy: { createdAt: "desc" },
       include: {
-        createdBy: { select: { id: true, name: true, role: true } },
-        handledBy: { select: { id: true, name: true, role: true } },
+        createdBy: { select: adminRefSelect },
+        handledBy: { select: adminRefSelect },
         ticket: {
           include: ticketInclude,
         },
@@ -356,26 +369,28 @@ export async function listEscalations(input: {
   const users = await hydrateUsersByIds(rows.map((r) => r.ticket.userId));
 
   return {
-    data: rows.map((row) => ({
-      id: row.id,
-      ticketId: row.ticketId,
-      target: row.target,
-      reason: row.reason,
-      status: row.status,
-      notes: row.notes,
-      createdAt: row.createdAt.toISOString(),
-      resolvedAt: row.resolvedAt?.toISOString() ?? null,
-      createdBy: row.createdBy,
-      handledBy: row.handledBy,
-      ticket: {
-        id: row.ticket.id,
-        subject: row.ticket.subject,
-        category: row.ticket.category,
-        priority: row.ticket.priority,
-        status: row.ticket.status,
-        user: users.get(row.ticket.userId) ?? null,
-      },
-    })),
+    data: await Promise.all(
+      rows.map(async (row) => ({
+        id: row.id,
+        ticketId: row.ticketId,
+        target: row.target,
+        reason: row.reason,
+        status: row.status,
+        notes: row.notes,
+        createdAt: row.createdAt.toISOString(),
+        resolvedAt: row.resolvedAt?.toISOString() ?? null,
+        createdBy: (await serializeAdminRef(row.createdBy))!,
+        handledBy: await serializeAdminRef(row.handledBy),
+        ticket: {
+          id: row.ticket.id,
+          subject: row.ticket.subject,
+          category: row.ticket.category,
+          priority: row.ticket.priority,
+          status: row.ticket.status,
+          user: users.get(row.ticket.userId) ?? null,
+        },
+      })),
+    ),
     total,
     page,
     pageSize,

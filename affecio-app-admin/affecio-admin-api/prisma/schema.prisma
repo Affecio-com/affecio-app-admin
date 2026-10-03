@@ -263,6 +263,7 @@ model AdminUser {
   failedLoginCount     Int                 @default(0)
   lockedUntil          DateTime?
   disabledAt           DateTime?
+  photoKey             String?
   createdAt            DateTime            @default(now())
   updatedAt            DateTime            @updatedAt
   invitesSent          AdminInvite[]       @relation("AdminInvitesSent")

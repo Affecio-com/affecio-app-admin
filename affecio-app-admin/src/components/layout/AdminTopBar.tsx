@@ -11,17 +11,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { AdminAvatar } from "@/components/admin/AdminAvatar";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { getPageTitleFromPath } from "@/lib/page-title";
 import { formatRelativeTime } from "@/lib/format";
 import { useAuth } from "@/providers/AuthProvider";
-
-function getInitials(name?: string | null): string {
-  if (!name) return "A";
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
-}
 
 function formatRole(role?: string): string {
   if (!role) return "Admin";
@@ -51,9 +45,7 @@ export function AdminTopBar() {
               type="button"
               className="flex items-center gap-2 rounded-lg border border-affecio-border bg-affecio-surface py-1 pl-1 pr-2 transition-colors hover:bg-affecio-input"
             >
-              <span className="flex h-7 w-7 items-center justify-center rounded-md bg-affecio-text text-[11px] font-semibold text-affecio-bg">
-                {getInitials(admin?.name)}
-              </span>
+              <AdminAvatar admin={admin} size="sm" className="h-7 w-7" />
               <span className="hidden text-left sm:block">
                 <span className="block text-xs font-medium text-affecio-text">{admin?.name ?? "Admin"}</span>
                 <span className="block text-[11px] text-affecio-muted">{formatRole(admin?.role)}</span>

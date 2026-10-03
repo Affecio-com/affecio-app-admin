@@ -21,6 +21,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { StatusPill } from "@/components/shared/StatusPill";
 import { TableSkeleton } from "@/components/shared/LoadingSkeleton";
 import { ApiErrorMessage } from "@/components/shared/ApiErrorMessage";
+import { AdminUserCell } from "@/components/admin/AdminUserCell";
 import { formatDateTime, formatRelativeTime } from "@/lib/format";
 import {
   getAdminUsers,
@@ -191,7 +192,13 @@ function AdminUsersContent() {
                 <DataTable
                   data={pending}
                   columns={[
-                    { key: "name", header: "Name", cell: (a) => a.name },
+                    {
+                      key: "name",
+                      header: "Team member",
+                      cell: (a) => (
+                        <AdminUserCell admin={{ id: a.id, name: a.name, email: a.email, role: a.role }} subtitle />
+                      ),
+                    },
                     { key: "email", header: "Email", cell: (a) => a.email },
                     {
                       key: "role",
@@ -211,7 +218,7 @@ function AdminUsersContent() {
                     {
                       key: "invitedBy",
                       header: "Invited by",
-                      cell: (a) => a.invitedBy.name,
+                      cell: (a) => <AdminUserCell admin={a.invitedBy} />,
                     },
                     {
                       key: "actions",
@@ -247,7 +254,11 @@ function AdminUsersContent() {
               <DataTable
                 data={admins}
                 columns={[
-                  { key: "name", header: "Name", cell: (a) => a.name },
+                  {
+                    key: "name",
+                    header: "Team member",
+                    cell: (a) => <AdminUserCell admin={a} subtitle />,
+                  },
                   { key: "email", header: "Email", cell: (a) => a.email },
                   {
                     key: "role",
